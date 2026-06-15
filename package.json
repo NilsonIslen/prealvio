@@ -4,10 +4,13 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "node scripts/dev.mjs",
+    "dev:api": "node --watch --env-file=.env.local server/server.mjs",
+    "dev:web": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "start:api": "node --env-file=.env.local server/server.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.17.0",
