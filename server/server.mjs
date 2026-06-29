@@ -5,13 +5,19 @@ import { getQuestion, questions } from './questions.mjs'
 import { createId, createToken, mutateStore, readStore } from './store.mjs'
 
 const port = Number(process.env.REVELOX_API_PORT ?? 8788)
-const loginAmountNano = '0.01'
+const loginAmountNano = '1'
 const loginReceiverAddress =
   process.env.LOGIN_RECEIVER_NANO_ADDRESS ??
   'nano_19o77pnp71wufuic4txepeumhtt6imouy71ekwi7165suax43dxeu3t4ro5q'
 const paymentIntentTtlMs = 15 * 60 * 1000
 const paymentCheckIntervalMs = 12 * 1000
+const maxRequestBodyBytes = Number(process.env.REVELOX_MAX_BODY_BYTES ?? 256 * 1024)
+const rateLimitWindowMs = Number(process.env.REVELOX_RATE_LIMIT_WINDOW_MS ?? 60 * 1000)
+const rateLimitDefaultMax = Number(process.env.REVELOX_RATE_LIMIT_DEFAULT_MAX ?? 180)
+const rateLimitWriteMax = Number(process.env.REVELOX_RATE_LIMIT_WRITE_MAX ?? 60)
+const rateLimitPaymentMax = Number(process.env.REVELOX_RATE_LIMIT_PAYMENT_MAX ?? 30)
 const paymentChecks = new Map()
+const rateLimitBuckets = new Map()
 
 const sendJson = (response, status, data, headers = {}) => {
   response.writeHead(status, {
@@ -24,13 +30,78 @@ const sendJson = (response, status, data, headers = {}) => {
 
 const readBody = async (request) => {
   const chunks = []
+  let size = 0
 
   for await (const chunk of request) {
-    chunks.push(Buffer.from(chunk))
+    const buffer = Buffer.from(chunk)
+    size += buffer.length
+
+    if (size > maxRequestBodyBytes) {
+      throw new Error('La solicitud es demasiado grande')
+    }
+
+    chunks.push(buffer)
   }
 
   if (!chunks.length) return {}
   return JSON.parse(Buffer.concat(chunks).toString('utf8'))
+}
+
+const getClientIp = (request) =>
+  String(request.headers['x-forwarded-for'] ?? '')
+    .split(',')[0]
+    .trim() ||
+  request.socket.remoteAddress ||
+  'unknown'
+
+const getRateLimitMax = (request, url) => {
+  if (
+    url.pathname.includes('/unlock') ||
+    url.pathname.startsWith('/api/auth/')
+  ) {
+    return rateLimitPaymentMax
+  }
+
+  if (request.method !== 'GET') return rateLimitWriteMax
+
+  return rateLimitDefaultMax
+}
+
+const checkRateLimit = (request, url) => {
+  if (!url.pathname.startsWith('/api/') || url.pathname === '/api/health') {
+    return { allowed: true }
+  }
+
+  const maxRequests = getRateLimitMax(request, url)
+
+  if (!Number.isFinite(maxRequests) || maxRequests <= 0) {
+    return { allowed: true }
+  }
+
+  const now = Date.now()
+  const windowMs =
+    Number.isFinite(rateLimitWindowMs) && rateLimitWindowMs > 0
+      ? rateLimitWindowMs
+      : 60 * 1000
+  const bucketKey = `${getClientIp(request)}:${request.method}:${url.pathname}`
+  const bucket = rateLimitBuckets.get(bucketKey)
+
+  if (!bucket || bucket.resetAt <= now) {
+    rateLimitBuckets.set(bucketKey, {
+      count: 1,
+      resetAt: now + windowMs,
+    })
+    return { allowed: true }
+  }
+
+  bucket.count += 1
+
+  if (bucket.count <= maxRequests) return { allowed: true }
+
+  return {
+    allowed: false,
+    retryAfter: Math.ceil((bucket.resetAt - now) / 1000),
+  }
 }
 
 const getBearerToken = (request) => {
@@ -93,6 +164,26 @@ const hasUnlockAccess = (intent, token) => {
 
 const getQuestionKey = (question) => question?.key ?? question?.prompt
 
+const countWords = (value) => String(value ?? '').trim().split(/\s+/).filter(Boolean).length
+
+const countCharacters = (value) => String(value ?? '').trim().length
+
+const getStoredFieldValue = (answerText, field) => {
+  const prefix = `${field.label}:`
+  const startIndex = answerText.startsWith(prefix)
+    ? 0
+    : answerText.indexOf(`\n${prefix}`)
+
+  if (startIndex < 0) return ''
+
+  const valueStartIndex = startIndex + (startIndex === 0 ? prefix.length : prefix.length + 1)
+  const nextFieldIndex = answerText.indexOf('\n', valueStartIndex)
+
+  return answerText
+    .slice(valueStartIndex, nextFieldIndex >= 0 ? nextFieldIndex : undefined)
+    .trim()
+}
+
 const isCurrentAnswer = (question, item) => {
   if (!question) return false
   if (item?.questionKey !== getQuestionKey(question)) return false
@@ -100,10 +191,15 @@ const isCurrentAnswer = (question, item) => {
 
   const answerText = String(item?.answer ?? '')
 
-  return question.fields.some((field) =>
-    answerText.startsWith(`${field.label}:`) ||
-    answerText.includes(`\n${field.label}:`),
-  )
+  return question.fields.some((field) => {
+    const value = getStoredFieldValue(answerText, field)
+    if (!value) return false
+    if (question.minWords && countWords(value) < question.minWords) return false
+    if (question.maxWords && countWords(value) > question.maxWords) return false
+    if (question.maxCharacters && countCharacters(value) > question.maxCharacters) return false
+
+    return true
+  })
 }
 
 const getPublicProfile = (profile) => ({
@@ -173,6 +269,41 @@ const normalizeQuestionAnswer = (question, body) => {
       minRequiredFields === 1
         ? 'Completa al menos un campo de esta tarjeta para guardarla'
         : 'Completa los campos requeridos de esta tarjeta para guardarla',
+    )
+  }
+
+  if (
+    question.minWords &&
+    filledFields.some(
+      (field) => !Array.isArray(field.value) && countWords(field.value) < question.minWords,
+    )
+  ) {
+    throw new Error(
+      `La redacción debe tener al menos ${question.minWords} palabras para guardarla`,
+    )
+  }
+
+  if (
+    question.maxWords &&
+    filledFields.some(
+      (field) => !Array.isArray(field.value) && countWords(field.value) > question.maxWords,
+    )
+  ) {
+    throw new Error(
+      `La redacción no puede superar ${question.maxWords} palabras`,
+    )
+  }
+
+  if (
+    question.maxCharacters &&
+    filledFields.some(
+      (field) =>
+        !Array.isArray(field.value) &&
+        countCharacters(field.value) > question.maxCharacters,
+    )
+  ) {
+    throw new Error(
+      `La redacción no puede superar ${question.maxCharacters} caracteres`,
     )
   }
 
@@ -260,6 +391,7 @@ const createPaymentIntent = async ({
   baseAmount,
   profileId,
   answerId,
+  payerAddress,
   unlockTokenHash,
 }) =>
   mutateStore((store) => {
@@ -276,6 +408,7 @@ const createPaymentIntent = async ({
       amountNano: createUniqueAmount(baseAmount, store.paymentIntents),
       profileId,
       answerId,
+      payerAddress,
       unlockTokenHash,
       status: 'pending',
       createdAt: new Date(now).toISOString(),
@@ -342,6 +475,16 @@ const verifyPaymentIntent = async (
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? '/', `http://${request.headers.host}`)
+  const rateLimit = checkRateLimit(request, url)
+
+  if (!rateLimit.allowed) {
+    sendJson(response, 429, {
+      error: 'Demasiadas solicitudes. Intenta nuevamente en unos segundos.',
+    }, {
+      'Retry-After': String(rateLimit.retryAfter ?? 60),
+    })
+    return
+  }
 
   if (request.method === 'GET' && url.pathname === '/api/health') {
     sendJson(response, 200, { ok: true })
@@ -662,6 +805,7 @@ const server = createServer(async (request, response) => {
 
   if (request.method === 'POST' && unlockStartMatch) {
     const store = await readStore()
+    const session = getSession(request, store)
     const profile = store.profiles.find((item) => item.id === unlockStartMatch[1])
     const question = getQuestion(Number(unlockStartMatch[2]))
     const answer = profile?.answers.find(
@@ -670,8 +814,62 @@ const server = createServer(async (request, response) => {
         isCurrentAnswer(question, item),
     )
 
+    if (!session) {
+      sendJson(response, 401, {
+        error: 'Inicia sesión con Nano para desbloquear tarjetas',
+      })
+      return
+    }
+
     if (!profile || !answer) {
       sendJson(response, 404, { error: 'Respuesta no encontrada' })
+      return
+    }
+
+    if (profile.ownerAddress === session.ownerAddress) {
+      sendJson(response, 200, {
+        alreadyUnlocked: true,
+        ownerPreview: true,
+        answer: answer.answer,
+      })
+      return
+    }
+
+    const existingAccess = store.usedPayments.some(
+      (item) =>
+        item.purpose === 'unlock' &&
+        item.profileId === profile.id &&
+        item.answerId === answer.id &&
+        item.payerAddress === session.ownerAddress,
+    )
+
+    if (existingAccess) {
+      sendJson(response, 200, {
+        alreadyUnlocked: true,
+        answer: answer.answer,
+      })
+      return
+    }
+
+    const reusableIntent = store.paymentIntents
+      .filter(
+        (item) =>
+          item.purpose === 'unlock' &&
+          item.status === 'pending' &&
+          item.profileId === profile.id &&
+          item.answerId === answer.id &&
+          item.payerAddress === session.ownerAddress &&
+          new Date(item.expiresAt).getTime() > Date.now(),
+      )
+      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())[0]
+
+    if (reusableIntent) {
+      sendJson(response, 200, {
+        intentId: reusableIntent.id,
+        receiverAddress: reusableIntent.receiverAddress,
+        amountNano: reusableIntent.amountNano,
+        expiresAt: reusableIntent.expiresAt,
+      })
       return
     }
 
@@ -682,6 +880,7 @@ const server = createServer(async (request, response) => {
       baseAmount: answer.price,
       profileId: profile.id,
       answerId: answer.id,
+      payerAddress: session.ownerAddress,
       unlockTokenHash: hashUnlockToken(unlockToken).toString('hex'),
     })
     sendJson(response, 201, {
@@ -700,26 +899,77 @@ const server = createServer(async (request, response) => {
       const intentId = String(body.intentId ?? '').trim()
       const unlockToken = String(body.unlockToken ?? '').trim()
       const store = await readStore()
+      const session = getSession(request, store)
       const profile = store.profiles.find((item) => item.id === unlockMatch[1])
       const question = getQuestion(Number(unlockMatch[2]))
       const answer = profile?.answers.find(
         (item) =>
           item.id === Number(unlockMatch[2]) &&
-          isCurrentAnswer(question, item),
+        isCurrentAnswer(question, item),
       )
+
+      if (!session) {
+        sendJson(response, 401, {
+          error: 'Inicia sesión con Nano para ver tarjetas desbloqueadas',
+        })
+        return
+      }
 
       if (!profile || !answer) {
         sendJson(response, 404, { error: 'Respuesta no encontrada' })
         return
       }
 
+      if (profile.ownerAddress === session.ownerAddress) {
+        sendJson(response, 200, {
+          answer: answer.answer,
+          ownerPreview: true,
+        })
+        return
+      }
+
+      const existingAccess = store.usedPayments.some(
+        (item) =>
+          item.purpose === 'unlock' &&
+          item.profileId === profile.id &&
+          item.answerId === answer.id &&
+          item.payerAddress === session.ownerAddress,
+      )
+
+      if (!intentId && existingAccess) {
+        sendJson(response, 200, {
+          answer: answer.answer,
+          payerAddress: session.ownerAddress,
+        })
+        return
+      }
+
+      const recoverablePendingIntent = !intentId
+        ? store.paymentIntents
+            .filter(
+              (item) =>
+                item.purpose === 'unlock' &&
+                item.status === 'pending' &&
+                item.profileId === profile.id &&
+                item.answerId === answer.id &&
+                item.payerAddress === session.ownerAddress &&
+                new Date(item.expiresAt).getTime() > Date.now(),
+            )
+            .sort(
+              (left, right) =>
+                new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
+            )[0]
+        : null
+      const effectiveIntentId = intentId || recoverablePendingIntent?.id || ''
+
       const completedIntent = store.paymentIntents.find(
         (item) =>
-          item.id === intentId &&
+          item.id === effectiveIntentId &&
           item.purpose === 'unlock' &&
           item.status === 'completed' &&
           item.profileId === profile.id &&
-          item.answerId === answer.id,
+          item.answerId === answer.id &&
+          item.payerAddress === session.ownerAddress,
       )
 
       if (completedIntent && !hasUnlockAccess(completedIntent, unlockToken)) {
@@ -734,7 +984,7 @@ const server = createServer(async (request, response) => {
         completedIntent.answerQuestionKey === getQuestionKey(question)
       ) {
         sendJson(response, 200, {
-          answer: completedIntent.answerSnapshot,
+          answer: answer.answer,
           paymentHash: completedIntent.paymentHash,
           payerAddress: completedIntent.payerAddress,
         })
@@ -743,12 +993,16 @@ const server = createServer(async (request, response) => {
 
       const pendingIntent = store.paymentIntents.find(
         (item) =>
-          item.id === intentId &&
+          item.id === effectiveIntentId &&
           item.purpose === 'unlock' &&
-          item.status === 'pending',
+          item.status === 'pending' &&
+          item.payerAddress === session.ownerAddress,
       )
 
-      if (!hasUnlockAccess(pendingIntent, unlockToken)) {
+      if (
+        !hasUnlockAccess(pendingIntent, unlockToken) &&
+        pendingIntent?.payerAddress !== session.ownerAddress
+      ) {
         sendJson(response, 403, {
           error: 'Este acceso pertenece exclusivamente a quien inició el pago',
         })
@@ -767,13 +1021,20 @@ const server = createServer(async (request, response) => {
       const fallbackAmountNano =
         competingIntents.length === 0 ? answer.price : undefined
       const { intent, payment } = await verifyPaymentIntent(
-        intentId,
+        effectiveIntentId,
         'unlock',
         fallbackAmountNano,
       )
 
       if (intent.profileId !== profile.id || intent.answerId !== answer.id) {
         sendJson(response, 400, { error: 'El pago no corresponde a esta respuesta' })
+        return
+      }
+
+      if (payment.senderWallet !== session.ownerAddress) {
+        sendJson(response, 403, {
+          error: 'El pago debe realizarse desde la misma wallet Nano con la que iniciaste sesión',
+        })
         return
       }
 

@@ -77,10 +77,31 @@
 }
 
 .header-link {
-  color: #7b2438;
-  font-size: 0.9rem;
-  font-weight: 800;
+  display: inline-flex;
+  min-height: 42px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border: 1px solid rgba(216, 67, 100, 0.24);
+  border-radius: 999px;
+  color: #ffffff;
+  font-size: 0.92rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, #ff5f7e, #d84364);
+  box-shadow: 0 12px 28px rgba(216, 67, 100, 0.24);
   text-decoration: none;
+}
+
+.header-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 16px 34px rgba(216, 67, 100, 0.3);
+}
+
+.public-topbar-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
 }
 
 button,
@@ -253,26 +274,12 @@ h2 {
   line-height: 1.5;
 }
 
-.rate-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid rgba(32, 43, 48, 0.1);
-  border-radius: 8px;
-  background: #fff2f5;
-}
-
-.rate-card span {
+.login-note {
+  margin: 0;
   color: #7b4a54;
-  font-size: 0.82rem;
-  font-weight: 800;
-}
-
-.rate-card strong {
-  color: #19141f;
-  font-size: 0.98rem;
+  font-size: 0.88rem;
+  font-weight: 750;
+  line-height: 1.5;
 }
 
 .wallet-help {
@@ -437,6 +444,59 @@ h2 {
   line-height: 1.6;
 }
 
+.usage-policy {
+  display: grid;
+  gap: 10px;
+  padding: clamp(16px, 2.4vw, 22px);
+  border: 1px solid rgba(32, 43, 48, 0.12);
+  border-radius: 10px;
+  color: #385257;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.usage-policy strong {
+  color: var(--heading);
+  font-size: 1rem;
+  font-weight: 900;
+}
+
+.usage-policy ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.usage-policy li {
+  font-size: 0.9rem;
+  font-weight: 720;
+  line-height: 1.45;
+}
+
+.buyer-policy {
+  max-width: 980px;
+  margin: 0 auto;
+}
+
+.buyer-login-panel,
+.buyer-session-note {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid rgba(216, 67, 100, 0.2);
+  border-radius: 9px;
+  background: #fff7f8;
+}
+
+.buyer-login-panel p,
+.buyer-session-note {
+  margin: 0;
+  color: #7b4a54;
+  font-size: 0.92rem;
+  font-weight: 780;
+  line-height: 1.5;
+}
+
 .question-card {
   display: grid;
   gap: 14px;
@@ -497,6 +557,29 @@ h2 {
   font-size: 0.84rem;
   font-weight: 800;
   overflow-wrap: anywhere;
+}
+
+.creator-donation {
+  display: grid;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid rgba(32, 43, 48, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.75);
+}
+
+.creator-donation strong {
+  color: var(--heading);
+  font-size: 0.95rem;
+  font-weight: 900;
+}
+
+.creator-donation p {
+  margin: 0;
+  color: #385257;
+  font-size: 0.85rem;
+  font-weight: 720;
+  line-height: 1.45;
 }
 
 .locked-badge {
@@ -668,6 +751,16 @@ h2 {
   outline: 3px solid rgba(255, 95, 126, 0.16);
 }
 
+.word-count {
+  color: #a72f48;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.word-count.valid {
+  color: #2f7d5c;
+}
+
 .price-field {
   max-width: 360px;
 }
@@ -694,12 +787,6 @@ h2 {
 .price-input strong {
   padding: 0 14px;
   color: #d84364;
-}
-
-.usd-reference {
-  color: #7b4a54;
-  font-size: 0.85rem;
-  font-weight: 800;
 }
 
 .share-result {
@@ -886,6 +973,14 @@ h2 {
 
 .hidden-answer.revealed p {
   font-size: clamp(1.15rem, 2.5vw, 1.5rem);
+}
+
+.purchase-note {
+  margin: 0;
+  color: #7b4a54;
+  font-size: 0.84rem;
+  font-weight: 750;
+  line-height: 1.45;
 }
 
 .page-message {

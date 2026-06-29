@@ -1,103 +1,90 @@
 # Revelox
 
-Plataforma de perfiles con respuestas desbloqueables mediante Nano (XNO).
+## ¿Qué es Revelox?
 
-## Stack inicial
+Revelox es una plataforma diseñada para ayudar a las personas a conocerse antes de establecer vínculos importantes.
 
-- React 19
-- TypeScript
-- Vite
-- lucide-react
+Cada usuario construye un perfil mediante tarjetas. Cada tarjeta representa una dimensión específica de su identidad y contiene una redacción escrita por el propio titular.
 
-## Comandos
+Los visitantes pueden desbloquear individualmente las tarjetas mediante un pago en XNO (Nano), descubriendo progresivamente quién es realmente esa persona.
 
-```bash
-npm install
-npm run dev
-npm run build
-npm run lint
-```
+El objetivo no es responder preguntas aisladas, sino construir una imagen mental cada vez más completa del titular.
 
-## Flujo actual
+---
 
-- El login abre la wallet y detecta automaticamente la cuenta que paga.
-- El backend valida el pago confirmado antes de iniciar la sesion.
-- Cada wallet tiene un unico perfil y un enlace fijo derivado de su direccion.
-- Revelox controla un catalogo plano y permanente de tarjetas predefinidas.
-- El creador completa solo las tarjetas que desea publicar y define su precio.
-- Puede editar, agregar o eliminar sus respuestas sin cambiar el enlace.
-- El enlace aparece al iniciar sesion y no cambia al editar las respuestas.
-- El perfil publico oculta las respuestas y solicita el pago a la wallet del dueño.
-- El backend valida remitente, receptor e importe antes de revelar una respuesta.
-- Cada hash de pago solo puede utilizarse una vez.
+# Propósito
 
-## Catálogo inicial
+Las personas solemos construir relaciones importantes con información limitada.
 
-El catálogo actual es plano, no secuencial, y cada tarjeta funciona como un
-contenido independiente con precio propio en XNO. El autor elige qué tarjetas
-completar; al guardar una tarjeta, escribe una redacción personal sobre el tema
-predefinido por Revelox.
+Una amistad, una relación de pareja, una sociedad, una contratación o una colaboración suelen comenzar con conversaciones superficiales y una imagen incompleta de la otra persona.
 
-La version actual inicia con tarjetas concretas, como `Yo`, `Mi pareja` y
-`Mi hijo`.
-Cada respuesta es una revelación personal que puede contener opiniones,
-historias, recuerdos, experiencias, emociones, reflexiones o confesiones.
+Revelox nace para reducir esa incertidumbre.
 
-Las instrucciones se muestran una sola vez antes del formulario. Cada tarjeta
-muestra el tema predefinido y ofrece un campo de redacción personal. Los
-visitantes pueden desbloquear únicamente las tarjetas que les interesen.
+Permite que cada persona revele voluntariamente quién es, cómo piensa, qué siente, qué ha vivido, cuáles son sus valores, sus aspiraciones y las personas que han marcado su vida.
 
-La galeria personal se maneja temporalmente como un enlace a un album externo de
-fotografias. El almacenamiento real de imagenes queda pendiente para una fase
-posterior.
+Así, cualquier visitante puede descubrir progresivamente su identidad antes de decidir si desea establecer un vínculo más profundo.
 
-Revelox añade una fraccion unica al importe de cada solicitud durante 15 minutos.
-Esto permite identificar automaticamente la wallet que pago sin pedir su
-direccion manualmente.
+Revelox no pretende sustituir la experiencia de conocer a alguien.
 
-## Verificacion Nano
+Pretende hacer que ese proceso sea más consciente, transparente e informado.
 
-La API consulta primero el nodo configurado en `NANO_RPC_URL`. Si el nodo falla,
-se demora o todavia no encuentra el pago exacto, consulta las URLs separadas por
-coma en `NANO_RPC_FALLBACK_URLS`.
+Porque cuanto mejor conocemos a una persona, mejores decisiones podemos tomar sobre los vínculos que construimos con ella.
 
-```env
-NANO_RPC_URL=http://127.0.0.1:7076
-NANO_RPC_FALLBACK_URLS=https://rpc.nano.to
-NANO_RPC_TIMEOUT_MS=8000
-```
+---
 
-Para desarrollo, `npm run dev` inicia Vite y la API local. Los perfiles, sesiones
-y hashes usados se guardan en `server/data/revelox.json`, excluido de Git.
+# Filosofía
 
-## Limitaciones actuales
+Las tarjetas no existen para hacer preguntas.
 
-- El almacenamiento local JSON debe sustituirse por una base de datos antes de
-  escalar o desplegar varias instancias.
-- Las respuestas se guardan fuera del enlace, pero aun no estan cifradas en reposo.
-- La autenticacion demuestra un pago desde la wallet, no una firma criptografica.
+Existen para revelar partes de la identidad humana.
 
-## Tasa XNO/USD
+Cada tarjeta representa una dimensión distinta del titular.
 
-La referencia visible `1 XNO = X USD` se edita manualmente en:
+Mientras más tarjetas descubre un visitante, más completa es la imagen mental que construye sobre esa persona.
 
-```ts
-src/config/xnoRate.ts
-```
+---
 
-Actualiza el valor de `xnoUsdRate` segun el precio diario de Nano.
+# Reglas de las tarjetas
 
-## Compra de XNO
+* Deben describir al titular.
+* Deben comenzar por "Mi..." o "Yo".
+* Cada tarjeta representa una única dimensión de la identidad.
+* Deben permitir una redacción libre.
+* Cada tarjeta debe contener un mínimo de 100 palabras.
+* No existe límite máximo.
+* Deben despertar curiosidad.
+* Deben ayudar a comprender mejor al titular.
 
-El enlace a la tienda externa del creador se configura en:
+---
 
-```env
-VITE_XNO_CREATOR_STORE_URL=https://direccion-de-la-tienda.example
-```
+# Criterios para crear nuevas tarjetas
 
-## Proximos pasos sugeridos
+Toda nueva tarjeta deberá cumplir las siguientes condiciones:
 
-- Base de datos y cifrado de respuestas.
-- Autenticacion del dueño mediante prueba de control de la wallet.
-- Panel para administrar el catalogo plano de preguntas.
-- Historial de desbloqueos por visitante.
+* Representar una dimensión de la identidad humana que todavía no exista.
+* No duplicar otra tarjeta.
+* Generar suficiente curiosidad como para justificar un pago.
+* Ayudar a construir una imagen más completa del titular.
+* Mantener relevancia con el paso del tiempo.
+
+Si no cumple todas estas condiciones, no debe formar parte de Revelox.
+
+---
+
+# Principio de calidad
+
+Una tarjeta mediocre vale menos que no tener tarjeta.
+
+La calidad siempre tendrá prioridad sobre la cantidad.
+
+---
+
+# Visión
+
+Revelox aspira a convertirse en el mapa de identidad humana más completo del mundo.
+
+No pretende medir popularidad.
+
+No pretende recopilar datos.
+
+Pretende ayudar a las personas a conocerse mejor antes de decidir construir relaciones importantes.

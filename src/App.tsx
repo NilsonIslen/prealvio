@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import {
   Check,
   Copy,
@@ -13,7 +13,10 @@ import {
 } from 'lucide-react'
 import './App.css'
 
-const LOGIN_AMOUNT = '0.01'
+const LOGIN_AMOUNT = '1'
+const DEVELOPMENT_WALLET =
+  import.meta.env.VITE_LOGIN_RECEIVER_NANO_ADDRESS?.trim() ??
+  'nano_19o77pnp71wufuic4txepeumhtt6imouy71ekwi7165suax43dxeu3t4ro5q'
 const LOGIN_INTENT_STORAGE_KEY = 'revelox-login-intent'
 const COOKIE_SESSION = 'cookie-session'
 const xnoCreatorStoreUrl =
@@ -21,12 +24,16 @@ const xnoCreatorStoreUrl =
 
 type Question = {
   id: number
+  key?: string
   prompt: string
   answer: string
   values: Record<string, QuestionValue>
   price: string
   suggestedPrice: string
   minRequiredFields?: number
+  minWords?: number
+  maxWords?: number
+  maxCharacters?: number
   fields?: QuestionField[]
 }
 
@@ -44,9 +51,13 @@ type QuestionField = {
 
 type QuestionDefinition = {
   id: number
+  key?: string
   prompt: string
   suggestedPrice: string
   minRequiredFields?: number
+  minWords?: number
+  maxWords?: number
+  maxCharacters?: number
   fields?: QuestionField[]
 }
 
@@ -108,22 +119,83 @@ const getAuthHeaders = (authToken: string): Record<string, string> => {
 const getUnlockIntentStorageKey = (profileId: string, answerId: number) =>
   `revelox-unlock-intent:${profileId}:${answerId}`
 
-const getUnlockedAnswersStorageKey = (profileId: string) =>
-  `revelox-unlocked-answers:${profileId}`
-
 const getAnswerAccessKey = (answer: {
   id: number
   questionKey?: string
   prompt?: string
 }) => `${answer.id}:${answer.questionKey ?? answer.prompt ?? ''}`
 
-const getStoredUnlockedAnswers = (profileId: string) => {
-  try {
-    const value = localStorage.getItem(getUnlockedAnswersStorageKey(profileId))
-    return value ? (JSON.parse(value) as Record<string, string>) : {}
-  } catch {
-    return {}
+const getQuestionDraftStorageKey = (
+  profileId: string,
+  question: Pick<Question, 'id' | 'key' | 'prompt'>,
+) =>
+  `revelox-draft:${profileId}:${question.id}:${question.key ?? question.prompt}`
+
+const hasDraftContent = (question: Question) =>
+  Boolean(question.answer.trim()) ||
+  Boolean(question.price.trim()) ||
+  Object.values(question.values).some((value) =>
+    Array.isArray(value) ? value.length > 0 : Boolean(value.trim()),
+  )
+
+const saveQuestionDraft = (profileId: string, question: Question) => {
+  if (!profileId) return
+
+  const key = getQuestionDraftStorageKey(profileId, question)
+
+  if (!hasDraftContent(question)) {
+    localStorage.removeItem(key)
+    return
   }
+
+  localStorage.setItem(
+    key,
+    JSON.stringify({
+      answer: question.answer,
+      values: question.values,
+      price: question.price,
+      updatedAt: new Date().toISOString(),
+    }),
+  )
+}
+
+const clearQuestionDraft = (
+  profileId: string,
+  question: Pick<Question, 'id' | 'key' | 'prompt'>,
+) => {
+  if (!profileId) return
+  localStorage.removeItem(getQuestionDraftStorageKey(profileId, question))
+}
+
+const applyStoredDrafts = (questions: Question[], profileId: string) => {
+  if (!profileId) return questions
+
+  return questions.map((question) => {
+    try {
+      const value = localStorage.getItem(
+        getQuestionDraftStorageKey(profileId, question),
+      )
+
+      if (!value) return question
+
+      const draft = JSON.parse(value) as Partial<
+        Pick<Question, 'answer' | 'values' | 'price'>
+      >
+
+      return {
+        ...question,
+        answer: typeof draft.answer === 'string' ? draft.answer : question.answer,
+        values:
+          draft.values && typeof draft.values === 'object'
+            ? draft.values
+            : question.values,
+        price: typeof draft.price === 'string' ? draft.price : question.price,
+      }
+    } catch {
+      clearQuestionDraft(profileId, question)
+      return question
+    }
+  })
 }
 
 const getStoredUnlockIntent = (profileId: string) => {
@@ -157,11 +229,15 @@ const getStoredUnlockIntent = (profileId: string) => {
 const initialQuestions: Question[] = [
   {
     id: 1,
+    key: 'Revelación:Yo',
     prompt: 'Yo',
     answer: '',
     values: {},
     price: '',
     suggestedPrice: '0.10',
+    minWords: 100,
+    maxWords: 2000,
+    maxCharacters: 12000,
   },
 ]
 
@@ -218,15 +294,42 @@ const parseQuestionValues = (question: Question, answer: string) => {
   )
 }
 
+const countWords = (value: string) =>
+  value.trim().split(/\s+/).filter(Boolean).length
+
+const questionWordCount = (question: Question) => {
+  if (!question.fields?.length) return countWords(question.answer)
+
+  return question.fields.reduce((total, field) => {
+    const value = question.values[field.key]
+
+    return total + (Array.isArray(value) ? value.length : countWords(value ?? ''))
+  }, 0)
+}
+
+const questionCharacterCount = (question: Question) => {
+  if (!question.fields?.length) return question.answer.trim().length
+
+  return question.fields.reduce((total, field) => {
+    const value = question.values[field.key]
+
+    return total + (Array.isArray(value) ? value.join(' ').length : String(value ?? '').trim().length)
+  }, 0)
+}
+
 const isQuestionComplete = (question: Question) =>
-  question.fields?.length
+  (question.fields?.length
     ? question.fields.filter((field) => {
-        const value = question.values[field.key]
-        return Array.isArray(value) ? value.length > 0 : Boolean(value?.trim())
-      }).length >=
-      (question.minRequiredFields ??
-        question.fields.filter((field) => !field.optional).length)
-    : Boolean(question.answer.trim())
+          const value = question.values[field.key]
+          return Array.isArray(value) ? value.length > 0 : Boolean(value?.trim())
+        }).length >=
+        (question.minRequiredFields ??
+          question.fields.filter((field) => !field.optional).length)
+    : Boolean(question.answer.trim())) &&
+  (!question.minWords || questionWordCount(question) >= question.minWords) &&
+  (!question.maxWords || questionWordCount(question) <= question.maxWords) &&
+  (!question.maxCharacters ||
+    questionCharacterCount(question) <= question.maxCharacters)
 
 const hasQuestionContent = (question: Question) =>
   question.fields?.length
@@ -244,6 +347,10 @@ const xnoToRaw = (value: string) => {
 
 const openNanoPayment = (receiver: string, amount: string) => {
   window.location.href = `nano:${receiver}?amount=${xnoToRaw(amount)}`
+}
+
+const openNanoDonation = (receiver: string) => {
+  window.location.href = `nano:${receiver}`
 }
 
 const copyText = async (value: string) => {
@@ -360,6 +467,15 @@ function LoadingPanel({ message }: { message: string }) {
 
 function PublicProfilePage({ profileId }: { profileId: string }) {
   const [storedUnlockIntent] = useState(() => getStoredUnlockIntent(profileId))
+  const [authToken, setAuthToken] = useState(
+    () => localStorage.getItem('revelox-auth-token') ?? '',
+  )
+  const [viewerProfileId, setViewerProfileId] = useState(
+    () => localStorage.getItem('revelox-profile-id') ?? '',
+  )
+  const [loginIntent, setLoginIntent] = useState<PaymentIntent | null>(
+    getStoredLoginIntent,
+  )
   const [profile, setProfile] = useState<PublicProfile | null>(null)
   const [loadError, setLoadError] = useState('')
   const [pendingAnswerId, setPendingAnswerId] = useState<number | null>(
@@ -368,14 +484,27 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
   const [paymentIntent, setPaymentIntent] = useState<PaymentIntent | null>(
     storedUnlockIntent?.intent ?? null,
   )
-  const [unlockedAnswers, setUnlockedAnswers] = useState<Record<string, string>>(
-    () => getStoredUnlockedAnswers(profileId),
-  )
+  const [unlockedAnswers, setUnlockedAnswers] = useState<Record<string, string>>({})
   const [copiedAnswerId, setCopiedAnswerId] = useState<number | null>(null)
+  const [authState, setAuthState] = useState<RequestState>({
+    loading: false,
+    error: '',
+  })
   const [requestState, setRequestState] = useState<RequestState>({
     loading: false,
     error: '',
   })
+  const isLoggedIn = Boolean(authToken)
+  const isOwnerViewing = Boolean(viewerProfileId && viewerProfileId === profileId)
+
+  const cacheUnlockedAnswer = useCallback((
+    answer: PublicProfile['answers'][number],
+    value: string,
+  ) => {
+    setUnlockedAnswers((current) => {
+      return { ...current, [getAnswerAccessKey(answer)]: value }
+    })
+  }, [])
 
   useEffect(() => {
     let active = true
@@ -388,19 +517,29 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
             const validKeys = new Set(
               nextProfile.answers.map((answer) => getAnswerAccessKey(answer)),
             )
-            const next = Object.fromEntries(
+            return Object.fromEntries(
               Object.entries(current).filter(([key]) => validKeys.has(key)),
             )
-
-            if (Object.keys(next).length !== Object.keys(current).length) {
-              localStorage.setItem(
-                getUnlockedAnswersStorageKey(profileId),
-                JSON.stringify(next),
-              )
-            }
-
-            return next
           })
+          if (authToken) {
+            nextProfile.answers.forEach((answer) => {
+              void apiRequest<{ answer: string }>(
+                `/api/profiles/${profileId}/answers/${answer.id}/unlock`,
+                {
+                  method: 'POST',
+                  headers: getAuthHeaders(authToken),
+                  body: '{}',
+                },
+              )
+                .then((data) => {
+                  if (!active) return
+                  cacheUnlockedAnswer(answer, data.answer)
+                })
+                .catch(() => undefined)
+            })
+          } else {
+            setUnlockedAnswers({})
+          }
           setLoadError('')
         })
         .catch((error: unknown) => {
@@ -417,16 +556,159 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
       active = false
       window.clearInterval(interval)
     }
-  }, [profileId])
+  }, [profileId, authToken, cacheUnlockedAnswer])
+
+  const requestLogin = async () => {
+    setAuthState({ loading: true, error: '' })
+
+    try {
+      const intent = await apiRequest<PaymentIntent>('/api/auth/start', {
+        method: 'POST',
+        body: '{}',
+      })
+      setLoginIntent(intent)
+      localStorage.setItem(LOGIN_INTENT_STORAGE_KEY, JSON.stringify(intent))
+      setAuthState({ loading: false, error: '' })
+      openNanoPayment(intent.receiverAddress, intent.amountNano)
+    } catch (error) {
+      setAuthState({
+        loading: false,
+        error:
+          error instanceof Error ? error.message : 'No se pudo iniciar el pago',
+      })
+    }
+  }
+
+  useEffect(() => {
+    if (!loginIntent || authToken) return
+
+    let active = true
+    let checking = false
+    const verifyPayment = async () => {
+      if (checking) return
+      checking = true
+
+      try {
+        const data = await apiRequest<{
+          token: string
+          ownerAddress: string
+          profileId: string
+        }>('/api/auth/verify', {
+          method: 'POST',
+          body: JSON.stringify({ intentId: loginIntent.intentId }),
+        })
+
+        if (!active) return
+
+        localStorage.setItem('revelox-auth-token', data.token)
+        localStorage.setItem('revelox-profile-id', data.profileId)
+        localStorage.removeItem(LOGIN_INTENT_STORAGE_KEY)
+        setAuthToken(data.token)
+        setViewerProfileId(data.profileId)
+        setLoginIntent(null)
+        setAuthState({ loading: false, error: '' })
+      } catch (error) {
+        if (!active) return
+
+        const message =
+          error instanceof Error ? error.message : 'Esperando confirmación'
+
+        if (message.includes('venció') || message.includes('utilizado')) {
+          localStorage.removeItem(LOGIN_INTENT_STORAGE_KEY)
+          setLoginIntent(null)
+          setAuthState({ loading: false, error: message })
+        }
+      } finally {
+        checking = false
+      }
+    }
+
+    void verifyPayment()
+    const interval = window.setInterval(verifyPayment, 12000)
+
+    return () => {
+      active = false
+      window.clearInterval(interval)
+    }
+  }, [authToken, loginIntent])
+
+  const retryLoginPayment = () => {
+    localStorage.removeItem(LOGIN_INTENT_STORAGE_KEY)
+    setLoginIntent(null)
+    setAuthState({ loading: false, error: '' })
+  }
+
+  const logoutReader = async () => {
+    try {
+      await apiRequest('/api/auth/logout', {
+        method: 'POST',
+        headers: getAuthHeaders(authToken),
+        body: '{}',
+      })
+    } finally {
+      localStorage.removeItem('revelox-auth-token')
+      localStorage.removeItem('revelox-profile-id')
+      localStorage.removeItem(LOGIN_INTENT_STORAGE_KEY)
+      setAuthToken('')
+      setViewerProfileId('')
+      setLoginIntent(null)
+      setUnlockedAnswers({})
+      setPendingAnswerId(null)
+      setPaymentIntent(null)
+      setAuthState({ loading: false, error: '' })
+      setRequestState({ loading: false, error: '' })
+    }
+  }
+
+  useEffect(() => {
+    apiRequest<PrivateProfile>('/api/me', {
+      headers: getAuthHeaders(authToken),
+    })
+      .then((profile) => {
+        if (!authToken) setAuthToken(COOKIE_SESSION)
+        localStorage.setItem('revelox-profile-id', profile.id)
+        setViewerProfileId(profile.id)
+      })
+      .catch(() => {
+        localStorage.removeItem('revelox-auth-token')
+        localStorage.removeItem('revelox-profile-id')
+        setAuthToken('')
+        setViewerProfileId('')
+        setUnlockedAnswers({})
+      })
+  }, [authToken])
 
   const beginUnlock = async (answerId: number) => {
+    if (!authToken) {
+      setRequestState({
+        loading: false,
+        error:
+          'Inicia sesión con Nano para desbloquear. El acceso quedará asociado a tu dirección Nano.',
+      })
+      return
+    }
+
     setRequestState({ loading: true, error: '' })
 
     try {
-      const intent = await apiRequest<PaymentIntent>(
+      const intent = await apiRequest<
+        PaymentIntent & { alreadyUnlocked?: boolean; answer?: string }
+      >(
         `/api/profiles/${profileId}/answers/${answerId}/unlock/start`,
-        { method: 'POST', body: '{}' },
+        {
+          method: 'POST',
+          headers: getAuthHeaders(authToken),
+          body: '{}',
+        },
       )
+
+      if (intent.alreadyUnlocked && intent.answer && profile) {
+        const answer = profile.answers.find((item) => item.id === answerId)
+        if (answer) cacheUnlockedAnswer(answer, intent.answer)
+        setRequestState({ loading: false, error: '' })
+        return
+      }
+
       setPaymentIntent(intent)
       setPendingAnswerId(answerId)
       localStorage.setItem(
@@ -445,7 +727,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
   }
 
   useEffect(() => {
-    if (!paymentIntent || pendingAnswerId === null) return
+    if (!paymentIntent || pendingAnswerId === null || !profile || !authToken) return
 
     let active = true
     let checking = false
@@ -458,6 +740,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
           `/api/profiles/${profileId}/answers/${pendingAnswerId}/unlock`,
           {
             method: 'POST',
+            headers: getAuthHeaders(authToken),
             body: JSON.stringify({
               intentId: paymentIntent.intentId,
               unlockToken: paymentIntent.unlockToken,
@@ -467,18 +750,8 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
 
         if (!active) return
 
-        setUnlockedAnswers((current) => {
-          const answer = profile?.answers.find((item) => item.id === pendingAnswerId)
-          const answerAccessKey = answer
-            ? getAnswerAccessKey(answer)
-            : String(pendingAnswerId)
-          const next = { ...current, [answerAccessKey]: data.answer }
-          localStorage.setItem(
-            getUnlockedAnswersStorageKey(profileId),
-            JSON.stringify(next),
-          )
-          return next
-        })
+        const answer = profile.answers.find((item) => item.id === pendingAnswerId)
+        if (answer) cacheUnlockedAnswer(answer, data.answer)
         localStorage.removeItem(
           getUnlockIntentStorageKey(profileId, pendingAnswerId),
         )
@@ -511,7 +784,14 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
       active = false
       window.clearInterval(interval)
     }
-  }, [paymentIntent, pendingAnswerId, profileId])
+  }, [
+    paymentIntent,
+    pendingAnswerId,
+    profileId,
+    profile,
+    authToken,
+    cacheUnlockedAnswer,
+  ])
 
   const retryUnlockPayment = () => {
     if (pendingAnswerId !== null) {
@@ -559,9 +839,22 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
     <main className="app-shell public-shell">
       <header className="topbar">
         <Brand />
-        <a className="header-link" href={window.location.pathname}>
-          Crear mi perfil
-        </a>
+        <div className="public-topbar-actions">
+          {isLoggedIn && (
+            <button
+              className="session-pill verified"
+              type="button"
+              onClick={logoutReader}
+            >
+              <LogOut size={16} />
+              Cerrar sesión
+            </button>
+          )}
+          <a className="header-link" href={window.location.pathname}>
+            <UserRound size={18} />
+            Crear mi perfil
+          </a>
+        </div>
       </header>
 
       <section className="profile-hero">
@@ -584,13 +877,79 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
                 if (!xnoCreatorStoreUrl) event.preventDefault()
               }}
             >
-              Comprar XNO al creador
+              Comprar XNO al creador (solo Colombia)
             </a>
             <a href="https://hub.nano.org/trading" target="_blank" rel="noreferrer">
-              Comprar XNO
+              Comprar o vender XNO con proveedores globales
             </a>
           </div>
         </div>
+      </section>
+
+      <section className="usage-policy buyer-policy">
+        <strong>Antes de desbloquear</strong>
+        <ul>
+          <li>Cada compra desbloquea únicamente la tarjeta seleccionada.</li>
+          <li>
+            Si el titular actualiza su redacción, verás la versión más reciente
+            disponible. No se conserva historial de versiones anteriores.
+          </li>
+          <li>Las demás tarjetas continúan protegidas hasta que decidas desbloquearlas.</li>
+          <li>Revelox está en fase experimental.</li>
+        </ul>
+
+        {!isLoggedIn && !loginIntent && (
+          <div className="buyer-login-panel">
+            <p>
+              Para comprar o ver tarjetas desbloqueadas, inicia sesión con Nano.
+              Tus compras quedarán asociadas a tu dirección Nano.
+            </p>
+            <button
+              className="primary-action"
+              type="button"
+              onClick={requestLogin}
+              disabled={authState.loading}
+            >
+              {authState.loading ? (
+                <LoaderCircle className="spin" size={18} />
+              ) : (
+                <Wallet size={18} />
+              )}
+              Pagar {LOGIN_AMOUNT} XNO para iniciar sesión
+            </button>
+          </div>
+        )}
+
+        {!isLoggedIn && loginIntent && (
+          <div className="waiting-payment-panel">
+            <div className="waiting-payment" role="status" aria-live="polite">
+              <LoaderCircle className="spin" size={22} />
+              <div>
+                <strong>Esperando confirmar el login</strong>
+                <span>Puede tardar unos segundos.</span>
+              </div>
+            </div>
+            <button
+              className="secondary-action"
+              type="button"
+              onClick={retryLoginPayment}
+            >
+              Intentar pago de nuevo
+            </button>
+          </div>
+        )}
+
+        {!isLoggedIn && authState.error && (
+          <p className="form-error">{authState.error}</p>
+        )}
+
+        {isLoggedIn && (
+          <p className="buyer-session-note">
+            {isOwnerViewing
+              ? 'Estás viendo tu propio perfil. Puedes revisar tus redacciones publicadas, pero esta información permanece oculta para cualquier usuario que no haya pagado por cada tarjeta.'
+              : 'Sesión Nano activa. Las tarjetas que desbloquees se asociarán a esta wallet.'}
+          </p>
+        )}
       </section>
 
       <section className="public-profile-grid">
@@ -634,19 +993,30 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
               )}
 
               {!unlockedAnswer && !isPending && (
-                <button
-                  className="primary-action"
-                  type="button"
-                  disabled={requestState.loading}
-                  onClick={() => beginUnlock(item.id)}
-                >
-                  {requestState.loading ? (
-                    <LoaderCircle className="spin" size={18} />
-                  ) : (
-                    <Wallet size={18} />
-                  )}
-                  Revelar por {item.price} XNO
-                </button>
+                <>
+                  <p className="purchase-note">
+                    {isLoggedIn
+                      ? 'El pago desbloquea esta tarjeta. Si el titular actualiza su redacción, verás la versión más reciente disponible.'
+                      : 'Inicia sesión con Nano antes de desbloquear. Así la compra quedará asociada a tu dirección Nano.'}
+                  </p>
+                  <button
+                    className="primary-action"
+                    type="button"
+                    disabled={requestState.loading || authState.loading}
+                    onClick={() =>
+                      isLoggedIn ? beginUnlock(item.id) : requestLogin()
+                    }
+                  >
+                    {requestState.loading || authState.loading ? (
+                      <LoaderCircle className="spin" size={18} />
+                    ) : (
+                      <Wallet size={18} />
+                    )}
+                    {isLoggedIn
+                      ? `Revelar por ${item.price} XNO`
+                      : `Pagar ${LOGIN_AMOUNT} XNO para iniciar sesión`}
+                  </button>
+                </>
               )}
 
               {!unlockedAnswer && isPending && (
@@ -710,7 +1080,10 @@ function CreatorPage() {
   useEffect(() => {
     apiRequest<{ questions: QuestionDefinition[] }>('/api/questions')
       .then(({ questions: definitions }) => {
-        setQuestions((current) => mergeQuestions(definitions, current))
+        const storedProfileId = localStorage.getItem('revelox-profile-id') ?? ''
+        setQuestions((current) =>
+          applyStoredDrafts(mergeQuestions(definitions, current), storedProfileId),
+        )
       })
       .catch(() => undefined)
   }, [])
@@ -725,7 +1098,7 @@ function CreatorPage() {
         setProfileId(profile.id)
         localStorage.setItem('revelox-profile-id', profile.id)
         setQuestions((current) =>
-          current.map((question) => {
+          applyStoredDrafts(current.map((question) => {
             const savedAnswer = profile.answers.find(
               (answer) => answer.id === question.id,
             )
@@ -738,7 +1111,7 @@ function CreatorPage() {
                   price: savedAnswer.price,
                 }
               : question
-          }),
+          }), profile.id),
         )
       })
       .catch(() => {
@@ -752,9 +1125,12 @@ function CreatorPage() {
 
   const updateQuestion = (id: number, field: 'answer' | 'price', value: string) => {
     setQuestions((current) =>
-      current.map((question) =>
-        question.id === id ? { ...question, [field]: value } : question,
-      ),
+      current.map((question) => {
+        if (question.id !== id) return question
+        const nextQuestion = { ...question, [field]: value }
+        saveQuestionDraft(profileId, nextQuestion)
+        return nextQuestion
+      }),
     )
     setCopied(false)
     setPublishState({ loading: false, error: '' })
@@ -767,14 +1143,15 @@ function CreatorPage() {
     value: QuestionValue,
   ) => {
     setQuestions((current) =>
-      current.map((question) =>
-        question.id === id
-          ? {
-              ...question,
-              values: { ...question.values, [key]: value },
-            }
-          : question,
-      ),
+      current.map((question) => {
+        if (question.id !== id) return question
+        const nextQuestion = {
+          ...question,
+          values: { ...question.values, [key]: value },
+        }
+        saveQuestionDraft(profileId, nextQuestion)
+        return nextQuestion
+      }),
     )
     setCopied(false)
     setPublishState({ loading: false, error: '' })
@@ -920,6 +1297,8 @@ function CreatorPage() {
       )
       setProfileId(profile.id)
       localStorage.setItem('revelox-profile-id', profile.id)
+      const persistedQuestion = questions.find((item) => item.id === questionId)
+      if (persistedQuestion) clearQuestionDraft(profile.id, persistedQuestion)
       setQuestions((current) =>
         current.map((question) => {
           if (question.id !== questionId) return question
@@ -996,19 +1375,26 @@ function CreatorPage() {
           </div>
 
           {!isLoggedIn && !loginIntent && (
-            <button
-              className="primary-action"
-              type="button"
-              onClick={requestLogin}
-              disabled={authState.loading}
-            >
-              {authState.loading ? (
-                <LoaderCircle className="spin" size={18} />
-              ) : (
-                <Wallet size={18} />
-              )}
-              Pagar {LOGIN_AMOUNT} XNO para iniciar sesión
-            </button>
+            <>
+              <p className="login-note">
+                El login cuesta {LOGIN_AMOUNT} XNO y queda activo en este
+                navegador. Si cambias de dispositivo, borras los datos del
+                navegador o cierras sesión, deberás iniciar sesión nuevamente.
+              </p>
+              <button
+                className="primary-action"
+                type="button"
+                onClick={requestLogin}
+                disabled={authState.loading}
+              >
+                {authState.loading ? (
+                  <LoaderCircle className="spin" size={18} />
+                ) : (
+                  <Wallet size={18} />
+                )}
+                Pagar {LOGIN_AMOUNT} XNO para iniciar sesión
+              </button>
+            </>
           )}
 
           {!isLoggedIn && loginIntent && (
@@ -1055,6 +1441,22 @@ function CreatorPage() {
                 {copied ? <Check size={18} /> : <Copy size={18} />}
                 {copied ? 'Enlace copiado' : 'Copiar enlace'}
               </button>
+              <div className="creator-donation">
+                <strong>Apoya Revelox</strong>
+                <p>
+                  Tú recibes el 100% de lo que pagan por tu contenido. Si
+                  Revelox te ha sido útil y has recibido ingresos, puedes apoyar
+                  al equipo de desarrollo con una donación voluntaria.
+                </p>
+                <button
+                  className="secondary-action"
+                  type="button"
+                  onClick={() => openNanoDonation(DEVELOPMENT_WALLET)}
+                >
+                  <Wallet size={18} />
+                  Donar al equipo
+                </button>
+              </div>
             </div>
           ) : (
             <div className="wallet-help">
@@ -1068,10 +1470,10 @@ function CreatorPage() {
                   if (!xnoCreatorStoreUrl) event.preventDefault()
                 }}
               >
-                Comprar Nano al creador
+                Comprar XNO al creador (solo Colombia)
               </a>
               <a href="https://hub.nano.org/trading" target="_blank" rel="noreferrer">
-                Otros proveedores
+                Comprar o vender XNO con proveedores globales
               </a>
             </div>
           )}
@@ -1091,6 +1493,16 @@ function CreatorPage() {
               tarjetas que quieras completar y escribe una redacción personal con
               tus opiniones, recuerdos, experiencias, emociones o confesiones.
             </p>
+          </div>
+
+          <div className="usage-policy">
+            <strong>Uso responsable</strong>
+            <ul>
+              <li>Revelox está en fase experimental.</li>
+              <li>No publiques datos privados de terceros sin consentimiento.</li>
+              <li>No publiques amenazas, extorsión, difamación ni contenido ilegal.</li>
+              <li>Puedes editar o eliminar tus redacciones cuando lo necesites.</li>
+            </ul>
           </div>
 
           <div className="form-stack">
@@ -1149,6 +1561,22 @@ function CreatorPage() {
                       }
 
                       if (field.type === 'textarea') {
+                        const currentWordCount = countWords(
+                          String(question.values[field.key] ?? ''),
+                        )
+                        const currentCharacterCount = String(
+                          question.values[field.key] ?? '',
+                        ).trim().length
+                        const minWords = question.minWords
+                        const maxWords = question.maxWords
+                        const maxCharacters = question.maxCharacters
+                        const isWordCountValid =
+                          (!minWords || currentWordCount >= minWords) &&
+                          (!maxWords || currentWordCount <= maxWords)
+                        const isCharacterCountValid =
+                          !maxCharacters ||
+                          currentCharacterCount <= maxCharacters
+
                         return (
                           <label className="field-label full-width-field" key={field.key}>
                             {fieldDisplayLabel && <span>{fieldDisplayLabel}</span>}
@@ -1165,9 +1593,25 @@ function CreatorPage() {
                               placeholder={
                                 isLoggedIn ? field.placeholder : 'Bloqueado'
                               }
+                              maxLength={maxCharacters}
                               required={!question.minRequiredFields && !field.optional}
                               disabled={!isLoggedIn}
                             />
+                            {minWords && (
+                              <small
+                                className={
+                                  isWordCountValid && isCharacterCountValid
+                                    ? 'word-count valid'
+                                    : 'word-count'
+                                }
+                              >
+                                {currentWordCount}/{minWords} palabras mínimo
+                                {maxWords ? ` · máximo ${maxWords}` : ''}
+                                {maxCharacters
+                                  ? ` · ${currentCharacterCount}/${maxCharacters} caracteres`
+                                  : ''}
+                              </small>
+                            )}
                           </label>
                         )
                       }
