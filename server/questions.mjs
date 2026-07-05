@@ -1,9 +1,5 @@
 const prompts = [
-  'Yo',
-  'Yo cuando estoy solo',
-  'Yo cuando amo',
-  'Yo cuando tengo miedo',
-  'Yo bajo presión',
+  'Mi autobiografía',
   'Yo en 3 años',
   'Yo en 5 años',
   'Yo en 10 años',
