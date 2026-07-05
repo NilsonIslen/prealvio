@@ -32,6 +32,7 @@ type Question = {
   values: Record<string, QuestionValue>
   price: string
   suggestedPrice: string
+  writingExample?: string
   minRequiredFields?: number
   minWords?: number
   maxWords?: number
@@ -56,6 +57,7 @@ type QuestionDefinition = {
   key?: string
   prompt: string
   suggestedPrice: string
+  writingExample?: string
   minRequiredFields?: number
   minWords?: number
   maxWords?: number
@@ -205,6 +207,8 @@ const initialQuestions: Question[] = [
     values: {},
     price: '',
     suggestedPrice: '0.10',
+    writingExample:
+      'Ejemplo: Yo soy una persona que ha cambiado mucho con los años. Durante una etapa fui más reservada, pero ciertas experiencias me obligaron a conocer mis límites, mis miedos y mis deseos. Hoy me entiendo mejor y quiero que quien se acerque a mí conozca esa historia completa, no solo la versión que suelo mostrar al principio.',
     minWords: 100,
     maxWords: 2000,
     maxCharacters: 12000,
@@ -438,12 +442,6 @@ function QuestionText({
       )}
     </div>
   )
-}
-
-function getWritingExample(prompt: string) {
-  const normalizedPrompt = prompt.toLocaleLowerCase('es-CO')
-
-  return `Ejemplo: Sobre ${normalizedPrompt}, empezaría contando una escena concreta de mi vida. Explicaría qué pasó, cómo me hizo sentir, qué aprendí y qué revela de mí hoy. También diría qué cambió con el tiempo y qué quisiera que otra persona entendiera antes de acercarse a mí.`
 }
 
 function Brand() {
@@ -1405,7 +1403,7 @@ function CreatorPage() {
                               }
                               placeholder={
                                 isLoggedIn
-                                  ? getWritingExample(question.prompt)
+                                  ? question.writingExample ?? field.placeholder
                                   : 'Bloqueado'
                               }
                               maxLength={maxCharacters}

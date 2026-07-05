@@ -186,12 +186,99 @@ const fields = [
   },
 ]
 
+const getWritingExample = (prompt) => {
+  const topic = prompt.toLocaleLowerCase('es-CO')
+
+  if (/yo en \d+ años/.test(topic)) {
+    return `Ejemplo: En ${topic.replace('yo en ', '')} me imagino en una etapa más clara de mi vida. Me veo tomando decisiones con más calma, cuidando mejor mis relaciones y construyendo algo que hoy todavía estoy empezando. También contaría qué temores tengo sobre ese futuro y qué estoy haciendo desde ahora para acercarme a esa versión de mí.`
+  }
+
+  if (topic.includes('fantasias')) {
+    return `Ejemplo: Cuando pienso en ${topic}, no lo veo solo como un deseo secreto, sino como una parte de mí que muestra lo que anhelo, lo que me falta o lo que me atrevo a imaginar. Contaría cuándo apareció esa fantasía, qué emoción me produce y qué dice sobre mis límites, mis curiosidades y mi forma de ver la vida.`
+  }
+
+  if (/infancia|adolescencia|adultez/.test(topic)) {
+    return `Ejemplo: Mi ${topic.replace('mi ', '')} estuvo marcada por momentos que todavía explican mucho de mi forma de ser. Recuerdo personas, lugares y decisiones que me hicieron sentir protegido, confundido o solo. Escribiría qué aprendí en esa etapa y qué parte de esa versión de mí todavía sigue presente.`
+  }
+
+  if (topic.includes('cita')) {
+    return `Ejemplo: En ${topic} hubo detalles que todavía recuerdo con claridad: la expectativa antes de llegar, la manera en que fluyó o se rompió la conversación y lo que sentí al volver a casa. Contaría qué me mostró esa experiencia sobre mi forma de conectar, elegir y leer a otra persona.`
+  }
+
+  if (/error|acierto|fracaso|logro|arrepentimiento|decisión|renuncia|sacrificio|cambio|quiebre/.test(topic)) {
+    return `Ejemplo: ${prompt} fue una experiencia que no se entiende solo por el resultado. Contaría qué estaba viviendo en ese momento, por qué actué como actué y qué consecuencias tuvo para mí. También explicaría qué aprendí, qué repetiría, qué no volvería a hacer y cómo eso cambió mi manera de decidir.`
+  }
+
+  if (/viajes|empleos|aventuras|fiestas|pérdidas|desafíos|mudanzas/.test(topic)) {
+    return `Ejemplo: ${prompt} reúne recuerdos que muestran cómo me muevo por el mundo. Hablaría de una experiencia concreta, de las personas que estuvieron ahí y de lo que descubrí sobre mí en ese contexto. Más que contar hechos, intentaría explicar qué cambió en mi carácter después de vivirlo.`
+  }
+
+  if (topic.includes('principios')) {
+    return `Ejemplo: En ${topic} hablaría de las reglas internas que intento respetar incluso cuando nadie me está mirando. Contaría de dónde vienen esos principios, cuándo los he puesto a prueba y qué cosas no estoy dispuesto a negociar porque definen mi manera de vivir.`
+  }
+
+  if (topic.includes('límites')) {
+    return `Ejemplo: En ${topic} explicaría qué cosas acepto, cuáles me incomodan y cuáles definitivamente no cruzo. También contaría cómo aprendí esos límites, si alguna vez permití que alguien los pasara y qué hago hoy para cuidarme sin dejar de relacionarme con otros.`
+  }
+
+  if (/pareja|parejas|expareja|amante|crush|admirador|amor imposible|fidelidad/.test(topic)) {
+    return `Ejemplo: En ${topic} contaría una historia que muestre cómo amo, cómo deseo y cómo me vinculo. Hablaría de lo que me atrae, de lo que me cuesta, de mis heridas y de las cosas que necesito para sentir confianza. También diría qué aprendí de esa persona o de esa etapa.`
+  }
+
+  if (/enemigo|rival|confidente|cómplice|persona favorita|terapeuta/.test(topic)) {
+    return `Ejemplo: ${prompt} revela una relación que tuvo un papel importante en mi vida. Contaría quién fue esa persona para mí, qué despertó en mi carácter y qué aprendí de esa cercanía, distancia o tensión. También explicaría por qué todavía la recuerdo de esa manera.`
+  }
+
+  if (/mamá|papá|hijos|hijas|hermanos|hermanas|abuelos|abuelas|tíos|tías|primos|primas|suegro|suegra|cuñados|cuñadas|familia/.test(topic)) {
+    return `Ejemplo: En ${topic} hablaría de una relación familiar con sus luces y sus sombras. Contaría qué recibí, qué me faltó, qué heridas o gratitudes guardo y cómo esa historia influyó en mi forma de amar, confiar, protegerme o tomar distancia.`
+  }
+
+  if (/amigo|amiga|amigos|amigas|vecinos|vecinas/.test(topic)) {
+    return `Ejemplo: En ${topic} contaría qué tipo de compañía he buscado y qué clase de persona soy cuando tengo confianza. Hablaría de lealtad, momentos compartidos, decepciones y aprendizajes sobre la amistad, la convivencia y la forma en que dejo entrar a otros en mi vida.`
+  }
+
+  if (/jefe|líder|socios|socias|empleados|empleadas|clientes|clientas|compañeros|compañeras|profesores|profesoras|alumnos|alumnas|mentores|mentoras/.test(topic)) {
+    return `Ejemplo: ${prompt} muestra cómo me relaciono en espacios de trabajo, aprendizaje o responsabilidad. Contaría una experiencia concreta, qué rol ocupé, qué conflictos o admiraciones aparecieron y qué dice eso sobre mi carácter, mi disciplina y mi manera de colaborar.`
+  }
+
+  if (/sexualidad|dinero|trabajo|salud|cuerpo|mente|rutina|deporte|arte|talento|vicio|debilidad|fortaleza/.test(topic)) {
+    return `Ejemplo: En ${topic} escribiría con honestidad sobre cómo vivo esa parte de mí. Contaría qué me cuesta, qué cuido, qué he descubierto y qué contradicciones tengo. También diría cómo esa dimensión afecta mis decisiones, mis relaciones y la imagen que otros suelen hacerse de mí.`
+  }
+
+  if (/deseado|deseada|propósito|proyecto de vida|futuro|legado/.test(topic)) {
+    return `Ejemplo: ${prompt} habla de la persona que quiero llegar a ser. Describiría esa visión sin maquillarla demasiado: qué deseo construir, qué hábitos necesito cambiar, qué miedo me acompaña y qué señal me haría sentir que voy por el camino correcto.`
+  }
+
+  if (topic.includes('mi relación con')) {
+    return `Ejemplo: En ${topic} contaría cómo se formó mi postura frente a ese tema. Hablaría de experiencias, influencias, dudas y cambios de opinión. También explicaría si esa relación es de curiosidad, rechazo, respeto, pasión o conflicto, y cómo afecta mi forma de ver el mundo.`
+  }
+
+  if (/consejo|prototipo/.test(topic)) {
+    return `Ejemplo: ${prompt} no sería una lista fría; explicaría de dónde nació esa idea y qué experiencias la sostienen. Contaría qué busco, qué evito y qué he aprendido después de equivocarme o mirar de cerca lo que realmente funciona para mí.`
+  }
+
+  if (/comida|música|película|serie|libro|color|estilo/.test(topic)) {
+    return `Ejemplo: En ${topic} hablaría de algo que parece simple, pero revela mi sensibilidad. Contaría cuándo empezó ese gusto, qué recuerdos despierta, con quién lo comparto y por qué siento que dice algo verdadero sobre mi personalidad.`
+  }
+
+  if (/hogar|ciudad|casa|habitación|mascota|proyecto|comunidad|invento/.test(topic)) {
+    return `Ejemplo: ${prompt} muestra el tipo de entorno, pertenencia o creación que me importa. Describiría un recuerdo o una imagen concreta, lo que me hace sentir y por qué ese lugar, vínculo o idea representa una parte importante de mi identidad.`
+  }
+
+  if (/dios|diablo|bien|mal|creencia|religión|política|ángel|demonio|pecado|ídolos/.test(topic)) {
+    return `Ejemplo: En ${topic} escribiría sobre mis creencias sin intentar convencer a nadie. Contaría qué experiencias formaron esa postura, qué dudas todavía tengo y cómo esa visión influye en mis decisiones, mis culpas, mis admiraciones y mi manera de juzgarme.`
+  }
+
+  return `Ejemplo: En ${topic} contaría una escena concreta de mi vida, cómo me hizo sentir y qué aprendí de eso. También explicaría qué revela de mí hoy, qué cambió con el tiempo y qué quisiera que otra persona entendiera antes de acercarse a mí.`
+}
+
 const createQuestion = (prompt, index) => ({
   id: index + 1,
   key: `Revelación:${prompt}`,
   category: 'Revelación',
   prompt,
   suggestedPrice: '0.10',
+  writingExample: getWritingExample(prompt),
   minWords: 100,
   maxWords: 2000,
   maxCharacters: 12000,
