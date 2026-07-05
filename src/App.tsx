@@ -209,21 +209,6 @@ const initialQuestions: Question[] = [
   },
 ]
 
-const mergeQuestions = (
-  definitions: QuestionDefinition[],
-  current: Question[],
-) =>
-  definitions.map((definition) => {
-    const existing = current.find((question) => question.id === definition.id)
-
-    return {
-      ...definition,
-      answer: existing?.answer ?? '',
-      values: existing?.values ?? {},
-      price: existing?.price ?? '',
-    }
-  })
-
 const parseQuestionValues = (question: Question, answer: string) => {
   if (!question.fields?.length) return {}
 
@@ -261,6 +246,44 @@ const parseQuestionValues = (question: Question, answer: string) => {
     }),
   )
 }
+
+const hasQuestionValues = (values: Question['values']) =>
+  Object.values(values).some((value) =>
+    Array.isArray(value) ? value.length > 0 : Boolean(value.trim()),
+  )
+
+const getQuestionFieldValue = (question: Question, field: QuestionField) => {
+  const value = question.values[field.key]
+
+  if (Array.isArray(value)) return value
+  if (typeof value === 'string' && value) return value
+  if (!question.answer) return value ?? ''
+
+  const parsedValues = parseQuestionValues(question, question.answer)
+  return parsedValues[field.key] ?? value ?? ''
+}
+
+const mergeQuestions = (
+  definitions: QuestionDefinition[],
+  current: Question[],
+) =>
+  definitions.map((definition) => {
+    const existing = current.find((question) => question.id === definition.id)
+    const answer = existing?.answer ?? ''
+    const baseQuestion = {
+      ...definition,
+      answer,
+      values: existing?.values ?? {},
+      price: existing?.price ?? '',
+    }
+
+    return {
+      ...baseQuestion,
+      values: hasQuestionValues(baseQuestion.values)
+        ? baseQuestion.values
+        : parseQuestionValues(baseQuestion, answer),
+    }
+  })
 
 const countWords = (value: string) =>
   value.trim().split(/\s+/).filter(Boolean).length
@@ -1219,12 +1242,13 @@ function CreatorPage() {
                       }
 
                       if (field.type === 'textarea') {
-                        const currentWordCount = countWords(
-                          String(question.values[field.key] ?? ''),
+                        const fieldValue = String(
+                          getQuestionFieldValue(question, field) ?? '',
                         )
-                        const currentCharacterCount = String(
-                          question.values[field.key] ?? '',
-                        ).trim().length
+                        const currentWordCount = countWords(
+                          fieldValue,
+                        )
+                        const currentCharacterCount = fieldValue.trim().length
                         const minWords = question.minWords
                         const maxWords = question.maxWords
                         const maxCharacters = question.maxCharacters
@@ -1240,7 +1264,7 @@ function CreatorPage() {
                             {fieldDisplayLabel && <span>{fieldDisplayLabel}</span>}
                             <textarea
                               rows={4}
-                              value={String(question.values[field.key] ?? '')}
+                              value={fieldValue}
                               onChange={(event) =>
                                 updateQuestionValue(
                                   question.id,
