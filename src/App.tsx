@@ -5,6 +5,7 @@ import {
   Copy,
   Eye,
   EyeOff,
+  ArrowLeft,
   LoaderCircle,
   Lock,
   LogOut,
@@ -448,9 +449,26 @@ function Brand() {
   )
 }
 
+const getCurrentPagePath = () =>
+  `${window.location.pathname}${window.location.search}${window.location.hash}`
+
+const getGuideHref = () =>
+  `/guia?volver=${encodeURIComponent(getCurrentPagePath())}`
+
+const getGuideReturnPath = () => {
+  const fallbackPath = '/'
+  const returnPath = new URLSearchParams(window.location.search).get('volver')
+
+  if (!returnPath) return fallbackPath
+  if (!returnPath.startsWith('/') || returnPath.startsWith('//')) return fallbackPath
+  if (returnPath.replace(/\/+$/, '') === '/guia') return fallbackPath
+
+  return returnPath
+}
+
 function GuideLink() {
   return (
-    <a className="guide-consent-link" href="/guia">
+    <a className="guide-consent-link" href={getGuideHref()}>
       <BookOpen size={18} />
       Al usar Revelox aceptas su guía, políticas y términos.
     </a>
@@ -458,14 +476,22 @@ function GuideLink() {
 }
 
 function GuidePage() {
+  const returnPath = getGuideReturnPath()
+
   return (
     <main className="app-shell guide-shell">
       <header className="topbar">
         <Brand />
-        <a className="header-link" href="/">
-          <UserRound size={18} />
-          Crear mi perfil
-        </a>
+        <div className="topbar-actions">
+          <a className="header-link muted" href={returnPath}>
+            <ArrowLeft size={18} />
+            Volver
+          </a>
+          <a className="header-link" href="/">
+            <UserRound size={18} />
+            Crear mi perfil
+          </a>
+        </div>
       </header>
 
       <section className="guide-page">
@@ -706,7 +732,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
       <header className="topbar">
         <Brand />
         <div className="topbar-actions">
-          <a className="header-link muted" href="/guia">
+          <a className="header-link muted" href={getGuideHref()}>
             <BookOpen size={18} />
             Guía
           </a>
@@ -1122,7 +1148,7 @@ function CreatorPage() {
       <header className="topbar">
         <Brand />
         <div className="topbar-actions">
-          <a className="header-link muted" href="/guia">
+          <a className="header-link muted" href={getGuideHref()}>
             <BookOpen size={18} />
             Guía
           </a>
