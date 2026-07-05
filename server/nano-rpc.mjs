@@ -133,8 +133,12 @@ export async function findIncomingPayment({
   receiverWallet,
   amountNano,
   fallbackAmountNano,
+  createdAfter,
   excludedHashes = [],
 }) {
+  const minimumTimestampMs = createdAfter
+    ? new Date(createdAfter).getTime()
+    : undefined
   const acceptedAmounts = [amountNano, fallbackAmountNano]
     .filter(Boolean)
     .filter((value, index, values) => values.indexOf(value) === index)
@@ -143,6 +147,14 @@ export async function findIncomingPayment({
     raw: nanoToRaw(value),
   }))
   const excluded = new Set(excludedHashes.map(normalizeNanoHash))
+  const isRecentEnough = (entry) => {
+    if (!minimumTimestampMs) return true
+    const timestamp = Number(entry?.local_timestamp ?? entry?.timestamp)
+
+    if (!Number.isFinite(timestamp) || timestamp <= 0) return false
+
+    return timestamp * 1000 >= minimumTimestampMs
+  }
   const getReceivableMatch = (entries) =>
     acceptedRawAmounts.flatMap(({ amountNano: matchedAmountNano, raw }) => {
       const match = entries.find(
@@ -180,6 +192,9 @@ export async function findIncomingPayment({
     })
 
     if (issue) throw new Error(issue)
+    if (!isRecentEnough(block)) {
+      throw new Error('El pago encontrado fue realizado antes de iniciar esta compra.')
+    }
 
     return {
       hash: normalizedHash,
@@ -197,6 +212,7 @@ export async function findIncomingPayment({
           entry.amount === raw &&
           entry.hash &&
           isNanoHash(entry.hash) &&
+          isRecentEnough(entry) &&
           !excluded.has(normalizeNanoHash(entry.hash)),
       )
       return match ? [{ match, matchedAmountNano }] : []

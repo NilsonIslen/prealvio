@@ -434,6 +434,7 @@ const verifyPaymentIntent = async (
     receiverWallet: intent.receiverAddress,
     amountNano: intent.amountNano,
     fallbackAmountNano,
+    createdAfter: intent.createdAt,
     excludedHashes: store.usedPayments.map((item) => item.hash),
   })
   paymentChecks.set(intentId, { promise, nextCheckAt: 0 })
