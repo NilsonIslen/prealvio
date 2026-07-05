@@ -1229,6 +1229,10 @@ function CreatorPage() {
               </div>
               <div className="session-detail">
                 <span>Enlace</span>
+                <p>
+                  Comparte este perfil: tus respuestas estarán ocultas y cada
+                  persona podrá desbloquearlas pagando el precio que definiste.
+                </p>
                 <a href={shareUrl} target="_blank" rel="noreferrer">
                   {shareUrl}
                 </a>

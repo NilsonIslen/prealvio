@@ -592,6 +592,14 @@ h2 {
   font-weight: 900;
 }
 
+.session-detail p {
+  margin: 0;
+  color: #6b555a;
+  font-size: 0.82rem;
+  font-weight: 720;
+  line-height: 1.42;
+}
+
 .session-detail strong,
 .session-detail a {
   overflow: hidden;
