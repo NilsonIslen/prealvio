@@ -20,6 +20,14 @@
   backdrop-filter: blur(18px);
 }
 
+.topbar-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  min-width: 0;
+}
+
 .brand,
 .session-pill,
 .primary-action,
@@ -93,9 +101,19 @@
   text-decoration: none;
 }
 
+.header-link.muted {
+  color: #7b2438;
+  background: #fff7f8;
+  box-shadow: none;
+}
+
 .header-link:hover {
   transform: translateY(-1px);
   box-shadow: 0 16px 34px rgba(216, 67, 100, 0.3);
+}
+
+.header-link.muted:hover {
+  box-shadow: 0 10px 22px rgba(216, 67, 100, 0.14);
 }
 
 button,
@@ -147,6 +165,29 @@ textarea:disabled {
   color: #7b2438;
   font-weight: 800;
   background: #fff7f8;
+}
+
+.guide-consent-link {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border: 1px solid rgba(216, 67, 100, 0.2);
+  border-radius: 8px;
+  color: #7b2438;
+  font-size: 0.92rem;
+  font-weight: 850;
+  line-height: 1.35;
+  text-align: center;
+  text-decoration: none;
+  background: #fff7f8;
+}
+
+.guide-consent-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 24px rgba(216, 67, 100, 0.14);
 }
 
 .icon-action {
@@ -813,6 +854,75 @@ h2 {
   background: transparent;
 }
 
+.guide-shell {
+  padding-bottom: 56px;
+}
+
+.guide-page {
+  display: grid;
+  gap: 16px;
+  width: min(100% - 32px, 860px);
+  margin: 0 auto;
+  padding: clamp(28px, 5vw, 52px) 0;
+}
+
+.guide-heading {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+  text-align: center;
+}
+
+.guide-heading svg {
+  color: #d84364;
+}
+
+.guide-heading h1 {
+  margin: 0;
+  color: var(--heading);
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  line-height: 1;
+}
+
+.guide-heading p {
+  max-width: 640px;
+  margin: 0;
+  color: #7b4a54;
+  font-weight: 750;
+  line-height: 1.55;
+}
+
+.guide-section {
+  display: grid;
+  gap: 10px;
+  padding: clamp(18px, 3vw, 26px);
+  border: 1px solid rgba(32, 43, 48, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 16px 42px rgba(42, 54, 58, 0.08);
+}
+
+.guide-section h2 {
+  margin: 0;
+  color: #7b2438;
+  font-size: clamp(1.15rem, 2vw, 1.4rem);
+}
+
+.guide-section p,
+.guide-section ul {
+  margin: 0;
+  color: #385257;
+  font-weight: 700;
+  line-height: 1.58;
+}
+
+.guide-section ul {
+  display: grid;
+  gap: 8px;
+  padding-left: 20px;
+}
+
 .public-shell {
   padding-bottom: 56px;
 }
@@ -847,6 +957,11 @@ h2 {
   width: min(100%, 620px);
   gap: 10px;
   margin-top: 18px;
+}
+
+.consent-strip {
+  width: min(100% - 32px, 620px);
+  margin: 0 auto 22px;
 }
 
 .profile-avatar {
@@ -1026,9 +1141,25 @@ h2 {
     flex-direction: column;
   }
 
+  .topbar-actions {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .header-link {
+    width: 100%;
+  }
+
   .session-pill {
     width: 100%;
     justify-content: center;
+  }
+
+  .guide-consent-link {
+    align-items: flex-start;
+    justify-content: flex-start;
+    text-align: left;
   }
 
   .wallet-help {

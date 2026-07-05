@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  BookOpen,
   Check,
   Copy,
   Eye,
@@ -447,6 +448,90 @@ function Brand() {
   )
 }
 
+function GuideLink() {
+  return (
+    <a className="guide-consent-link" href="/guia">
+      <BookOpen size={18} />
+      Al usar Revelox aceptas su guía, políticas y términos.
+    </a>
+  )
+}
+
+function GuidePage() {
+  return (
+    <main className="app-shell guide-shell">
+      <header className="topbar">
+        <Brand />
+        <a className="header-link" href="/">
+          <UserRound size={18} />
+          Crear mi perfil
+        </a>
+      </header>
+
+      <section className="guide-page">
+        <div className="guide-heading">
+          <BookOpen size={28} />
+          <h1>Guía</h1>
+          <p>
+            Indicaciones, política de uso y términos básicos para publicar o
+            revelar contenido en Revelox.
+          </p>
+        </div>
+
+        <article className="guide-section">
+          <h2>Cómo responder</h2>
+          <p>
+            Cada tarjeta contiene un tema predefinido por Revelox. Elige las
+            tarjetas que quieras completar y escribe una redacción personal con
+            tus opiniones, recuerdos, experiencias, emociones o confesiones.
+          </p>
+          <p>
+            Puedes editar o eliminar tus redacciones cuando lo necesites. Antes
+            de guardar, revisa que el texto diga exactamente lo que quieres
+            compartir y que el precio para revelarlo sea correcto.
+          </p>
+        </article>
+
+        <article className="guide-section">
+          <h2>Política de uso responsable</h2>
+          <ul>
+            <li>Revelox está en fase experimental.</li>
+            <li>No publiques datos privados de terceros sin consentimiento.</li>
+            <li>No publiques amenazas, extorsión, difamación ni contenido ilegal.</li>
+            <li>No uses la app para acosar, presionar, suplantar o dañar a otras personas.</li>
+            <li>Publica solo contenido que estés dispuesto a sostener como propio.</li>
+          </ul>
+        </article>
+
+        <article className="guide-section">
+          <h2>Revelaciones y pagos</h2>
+          <p>
+            Las revelaciones se desbloquean mediante pagos en XNO. La respuesta
+            revelada aparece en esa visita; si la persona cierra o recarga la
+            página, puede desaparecer, así que debe copiarla si quiere
+            conservarla.
+          </p>
+          <p>
+            Quien crea el perfil define el precio de cada redacción. Revelox no
+            garantiza que una revelación cumpla una expectativa específica ni
+            reemplaza acuerdos personales entre usuarios.
+          </p>
+        </article>
+
+        <article className="guide-section">
+          <h2>Términos básicos</h2>
+          <ul>
+            <li>Al usar Revelox aceptas estas indicaciones, políticas y términos.</li>
+            <li>Eres responsable por el contenido que publicas y por cómo usas lo revelado.</li>
+            <li>El acceso, los pagos y las sesiones pueden depender del navegador y del estado de la red.</li>
+            <li>La app puede cambiar mientras siga en desarrollo experimental.</li>
+          </ul>
+        </article>
+      </section>
+    </main>
+  )
+}
+
 function LoadingPanel({ message }: { message: string }) {
   return (
     <div className="page-message">
@@ -620,10 +705,16 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
     <main className="app-shell public-shell">
       <header className="topbar">
         <Brand />
-        <a className="header-link" href={window.location.pathname}>
-          <UserRound size={18} />
-          Crear mi perfil
-        </a>
+        <div className="topbar-actions">
+          <a className="header-link muted" href="/guia">
+            <BookOpen size={18} />
+            Guía
+          </a>
+          <a className="header-link" href={window.location.pathname}>
+            <UserRound size={18} />
+            Crear mi perfil
+          </a>
+        </div>
       </header>
 
       <section className="profile-hero">
@@ -633,11 +724,8 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
         <p>Identifica este perfil con la persona que compartió el enlace.</p>
       </section>
 
-      <section className="usage-policy buyer-policy">
-        <p>
-          La revelación aparece solo en esta visita. Si cierras o recargas,
-          desaparece.
-        </p>
+      <section className="consent-strip">
+        <GuideLink />
       </section>
 
       <section className="public-profile-grid">
@@ -1033,17 +1121,23 @@ function CreatorPage() {
     <main className="app-shell">
       <header className="topbar">
         <Brand />
-        {isLoggedIn ? (
-          <button className="session-pill verified" type="button" onClick={logout}>
-            <LogOut size={16} />
-            Cerrar sesión
-          </button>
-        ) : (
-          <span className="session-pill">
-            <Lock size={16} />
-            Solo lectura
-          </span>
-        )}
+        <div className="topbar-actions">
+          <a className="header-link muted" href="/guia">
+            <BookOpen size={18} />
+            Guía
+          </a>
+          {isLoggedIn ? (
+            <button className="session-pill verified" type="button" onClick={logout}>
+              <LogOut size={16} />
+              Cerrar sesión
+            </button>
+          ) : (
+            <span className="session-pill">
+              <Lock size={16} />
+              Solo lectura
+            </span>
+          )}
+        </div>
       </header>
 
       <section className="creator-intro">
@@ -1167,24 +1261,7 @@ function CreatorPage() {
           aria-label="Formulario para crear perfil"
           onSubmit={(event) => event.preventDefault()}
         >
-          <div className="questionnaire-instructions">
-            <strong>Cómo responder</strong>
-            <p>
-              Cada tarjeta contiene un tema predefinido por Revelox. Elige las
-              tarjetas que quieras completar y escribe una redacción personal con
-              tus opiniones, recuerdos, experiencias, emociones o confesiones.
-            </p>
-          </div>
-
-          <div className="usage-policy">
-            <strong>Uso responsable</strong>
-            <ul>
-              <li>Revelox está en fase experimental.</li>
-              <li>No publiques datos privados de terceros sin consentimiento.</li>
-              <li>No publiques amenazas, extorsión, difamación ni contenido ilegal.</li>
-              <li>Puedes editar o eliminar tus redacciones cuando lo necesites.</li>
-            </ul>
-          </div>
+          <GuideLink />
 
           <div className="form-stack">
             {questions.map((question, index) => (
@@ -1409,6 +1486,8 @@ function CreatorPage() {
 
 function App() {
   const profileId = new URLSearchParams(window.location.search).get('profile')
+  const path = window.location.pathname.replace(/\/+$/, '') || '/'
+  if (path === '/guia') return <GuidePage />
   return profileId ? <PublicProfilePage profileId={profileId} /> : <CreatorPage />
 }
 
