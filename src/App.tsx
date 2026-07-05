@@ -1233,9 +1233,6 @@ function CreatorPage() {
                   Comparte este perfil: tus respuestas estarán ocultas y cada
                   persona podrá desbloquearlas pagando el precio que definiste.
                 </p>
-                <a href={shareUrl} target="_blank" rel="noreferrer">
-                  {shareUrl}
-                </a>
               </div>
               <button
                 className="primary-action"
