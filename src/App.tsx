@@ -957,14 +957,18 @@ function CreatorPage() {
       setProfileId(profile.id)
       localStorage.setItem('revelox-profile-id', profile.id)
       const persistedQuestion = questions.find((item) => item.id === questionId)
+      const savedAnswer = profile.answers.find(
+        (answer) => answer.id === questionId,
+      )
+
+      if (method === 'PUT' && !savedAnswer) {
+        throw new Error('La redacción no quedó guardada. Tu texto se conservó para intentar de nuevo.')
+      }
+
       if (persistedQuestion) clearQuestionDraft(profile.id, persistedQuestion)
       setQuestions((current) =>
         current.map((question) => {
           if (question.id !== questionId) return question
-
-          const savedAnswer = profile.answers.find(
-            (answer) => answer.id === question.id,
-          )
 
           return savedAnswer
             ? {
@@ -991,11 +995,6 @@ function CreatorPage() {
   const saveAnswer = (id: number) => persistAnswer(id, 'PUT')
 
   const removeAnswer = async (id: number) => {
-    setQuestions((current) => current.map((question) =>
-      question.id === id
-        ? { ...question, answer: '', values: {}, price: '' }
-        : question,
-    ))
     setCopied(false)
     await persistAnswer(id, 'DELETE')
   }
