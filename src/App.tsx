@@ -504,6 +504,24 @@ function GuidePage() {
           </p>
         </div>
 
+        <article className="guide-section guide-donation">
+          <h2>Apoyo voluntario a Revelox</h2>
+          <p>
+            Quien publica recibe el 100% del precio definido para sus
+            revelaciones. Si Revelox te resulta útil y quieres apoyar su
+            mantenimiento, desarrollo y mejora continua, puedes enviar una
+            donación voluntaria al equipo.
+          </p>
+          <button
+            className="secondary-action guide-donation-action"
+            type="button"
+            onClick={() => openNanoDonation(DEVELOPMENT_WALLET)}
+          >
+            <Wallet size={18} />
+            Donar al equipo
+          </button>
+        </article>
+
         <article className="guide-section">
           <h2>Cómo responder</h2>
           <p>
@@ -542,24 +560,6 @@ function GuidePage() {
             garantiza que una revelación cumpla una expectativa específica ni
             reemplaza acuerdos personales entre usuarios.
           </p>
-        </article>
-
-        <article className="guide-section guide-donation">
-          <h2>Apoyo voluntario a Revelox</h2>
-          <p>
-            Quien publica recibe el 100% del precio definido para sus
-            revelaciones. Si Revelox te resulta útil y quieres apoyar su
-            mantenimiento, desarrollo y mejora continua, puedes enviar una
-            donación voluntaria al equipo.
-          </p>
-          <button
-            className="secondary-action guide-donation-action"
-            type="button"
-            onClick={() => openNanoDonation(DEVELOPMENT_WALLET)}
-          >
-            <Wallet size={18} />
-            Donar al equipo
-          </button>
         </article>
 
         <article className="guide-section">
