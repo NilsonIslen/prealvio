@@ -186,91 +186,188 @@ const fields = [
   },
 ]
 
-const getWritingExample = (prompt) => {
-  const topic = prompt.toLocaleLowerCase('es-CO')
-
-  if (/yo en \d+ años/.test(topic)) {
-    return `Ejemplo: En ${topic.replace('yo en ', '')} me imagino en una etapa más clara de mi vida. Me veo tomando decisiones con más calma, cuidando mejor mis relaciones y construyendo algo que hoy todavía estoy empezando. También contaría qué temores tengo sobre ese futuro y qué estoy haciendo desde ahora para acercarme a esa versión de mí.`
-  }
-
-  if (topic.includes('fantasias')) {
-    return `Ejemplo: Cuando pienso en ${topic}, no lo veo solo como un deseo secreto, sino como una parte de mí que muestra lo que anhelo, lo que me falta o lo que me atrevo a imaginar. Contaría cuándo apareció esa fantasía, qué emoción me produce y qué dice sobre mis límites, mis curiosidades y mi forma de ver la vida.`
-  }
-
-  if (/infancia|adolescencia|adultez/.test(topic)) {
-    return `Ejemplo: Mi ${topic.replace('mi ', '')} estuvo marcada por momentos que todavía explican mucho de mi forma de ser. Recuerdo personas, lugares y decisiones que me hicieron sentir protegido, confundido o solo. Escribiría qué aprendí en esa etapa y qué parte de esa versión de mí todavía sigue presente.`
-  }
-
-  if (topic.includes('cita')) {
-    return `Ejemplo: En ${topic} hubo detalles que todavía recuerdo con claridad: la expectativa antes de llegar, la manera en que fluyó o se rompió la conversación y lo que sentí al volver a casa. Contaría qué me mostró esa experiencia sobre mi forma de conectar, elegir y leer a otra persona.`
-  }
-
-  if (/error|acierto|fracaso|logro|arrepentimiento|decisión|renuncia|sacrificio|cambio|quiebre/.test(topic)) {
-    return `Ejemplo: ${prompt} fue una experiencia que no se entiende solo por el resultado. Contaría qué estaba viviendo en ese momento, por qué actué como actué y qué consecuencias tuvo para mí. También explicaría qué aprendí, qué repetiría, qué no volvería a hacer y cómo eso cambió mi manera de decidir.`
-  }
-
-  if (/viajes|empleos|aventuras|fiestas|pérdidas|desafíos|mudanzas/.test(topic)) {
-    return `Ejemplo: ${prompt} reúne recuerdos que muestran cómo me muevo por el mundo. Hablaría de una experiencia concreta, de las personas que estuvieron ahí y de lo que descubrí sobre mí en ese contexto. Más que contar hechos, intentaría explicar qué cambió en mi carácter después de vivirlo.`
-  }
-
-  if (topic.includes('principios')) {
-    return `Ejemplo: En ${topic} hablaría de las reglas internas que intento respetar incluso cuando nadie me está mirando. Contaría de dónde vienen esos principios, cuándo los he puesto a prueba y qué cosas no estoy dispuesto a negociar porque definen mi manera de vivir.`
-  }
-
-  if (topic.includes('límites')) {
-    return `Ejemplo: En ${topic} explicaría qué cosas acepto, cuáles me incomodan y cuáles definitivamente no cruzo. También contaría cómo aprendí esos límites, si alguna vez permití que alguien los pasara y qué hago hoy para cuidarme sin dejar de relacionarme con otros.`
-  }
-
-  if (/pareja|parejas|expareja|amante|crush|admirador|amor imposible|fidelidad/.test(topic)) {
-    return `Ejemplo: En ${topic} contaría una historia que muestre cómo amo, cómo deseo y cómo me vinculo. Hablaría de lo que me atrae, de lo que me cuesta, de mis heridas y de las cosas que necesito para sentir confianza. También diría qué aprendí de esa persona o de esa etapa.`
-  }
-
-  if (/enemigo|rival|confidente|cómplice|persona favorita|terapeuta/.test(topic)) {
-    return `Ejemplo: ${prompt} revela una relación que tuvo un papel importante en mi vida. Contaría quién fue esa persona para mí, qué despertó en mi carácter y qué aprendí de esa cercanía, distancia o tensión. También explicaría por qué todavía la recuerdo de esa manera.`
-  }
-
-  if (/mamá|papá|hijos|hijas|hermanos|hermanas|abuelos|abuelas|tíos|tías|primos|primas|suegro|suegra|cuñados|cuñadas|familia/.test(topic)) {
-    return `Ejemplo: En ${topic} hablaría de una relación familiar con sus luces y sus sombras. Contaría qué recibí, qué me faltó, qué heridas o gratitudes guardo y cómo esa historia influyó en mi forma de amar, confiar, protegerme o tomar distancia.`
-  }
-
-  if (/amigo|amiga|amigos|amigas|vecinos|vecinas/.test(topic)) {
-    return `Ejemplo: En ${topic} contaría qué tipo de compañía he buscado y qué clase de persona soy cuando tengo confianza. Hablaría de lealtad, momentos compartidos, decepciones y aprendizajes sobre la amistad, la convivencia y la forma en que dejo entrar a otros en mi vida.`
-  }
-
-  if (/jefe|líder|socios|socias|empleados|empleadas|clientes|clientas|compañeros|compañeras|profesores|profesoras|alumnos|alumnas|mentores|mentoras/.test(topic)) {
-    return `Ejemplo: ${prompt} muestra cómo me relaciono en espacios de trabajo, aprendizaje o responsabilidad. Contaría una experiencia concreta, qué rol ocupé, qué conflictos o admiraciones aparecieron y qué dice eso sobre mi carácter, mi disciplina y mi manera de colaborar.`
-  }
-
-  if (/sexualidad|dinero|trabajo|salud|cuerpo|mente|rutina|deporte|arte|talento|vicio|debilidad|fortaleza/.test(topic)) {
-    return `Ejemplo: En ${topic} escribiría con honestidad sobre cómo vivo esa parte de mí. Contaría qué me cuesta, qué cuido, qué he descubierto y qué contradicciones tengo. También diría cómo esa dimensión afecta mis decisiones, mis relaciones y la imagen que otros suelen hacerse de mí.`
-  }
-
-  if (/deseado|deseada|propósito|proyecto de vida|futuro|legado/.test(topic)) {
-    return `Ejemplo: ${prompt} habla de la persona que quiero llegar a ser. Describiría esa visión sin maquillarla demasiado: qué deseo construir, qué hábitos necesito cambiar, qué miedo me acompaña y qué señal me haría sentir que voy por el camino correcto.`
-  }
-
-  if (topic.includes('mi relación con')) {
-    return `Ejemplo: En ${topic} contaría cómo se formó mi postura frente a ese tema. Hablaría de experiencias, influencias, dudas y cambios de opinión. También explicaría si esa relación es de curiosidad, rechazo, respeto, pasión o conflicto, y cómo afecta mi forma de ver el mundo.`
-  }
-
-  if (/consejo|prototipo/.test(topic)) {
-    return `Ejemplo: ${prompt} no sería una lista fría; explicaría de dónde nació esa idea y qué experiencias la sostienen. Contaría qué busco, qué evito y qué he aprendido después de equivocarme o mirar de cerca lo que realmente funciona para mí.`
-  }
-
-  if (/comida|música|película|serie|libro|color|estilo/.test(topic)) {
-    return `Ejemplo: En ${topic} hablaría de algo que parece simple, pero revela mi sensibilidad. Contaría cuándo empezó ese gusto, qué recuerdos despierta, con quién lo comparto y por qué siento que dice algo verdadero sobre mi personalidad.`
-  }
-
-  if (/hogar|ciudad|casa|habitación|mascota|proyecto|comunidad|invento/.test(topic)) {
-    return `Ejemplo: ${prompt} muestra el tipo de entorno, pertenencia o creación que me importa. Describiría un recuerdo o una imagen concreta, lo que me hace sentir y por qué ese lugar, vínculo o idea representa una parte importante de mi identidad.`
-  }
-
-  if (/dios|diablo|bien|mal|creencia|religión|política|ángel|demonio|pecado|ídolos/.test(topic)) {
-    return `Ejemplo: En ${topic} escribiría sobre mis creencias sin intentar convencer a nadie. Contaría qué experiencias formaron esa postura, qué dudas todavía tengo y cómo esa visión influye en mis decisiones, mis culpas, mis admiraciones y mi manera de juzgarme.`
-  }
-
-  return `Ejemplo: En ${topic} contaría una escena concreta de mi vida, cómo me hizo sentir y qué aprendí de eso. También explicaría qué revela de mí hoy, qué cambió con el tiempo y qué quisiera que otra persona entendiera antes de acercarse a mí.`
+const writingExamples = {
+  'Mi autobiografía': `Ejemplo: Nací en una familia donde aprendí temprano a observar antes de hablar. Mi historia tiene mudanzas, errores, amores y decisiones que me fueron volviendo más consciente de quién soy y de lo que no quiero repetir.`,
+  'Yo en 3 años': `Ejemplo: En tres años me imagino con más estabilidad emocional y económica. Quiero estar trabajando en algo propio, rodeado de relaciones más sanas y con la sensación de que las decisiones difíciles de hoy tuvieron sentido.`,
+  'Yo en 5 años': `Ejemplo: En cinco años quiero mirar atrás y sentir que dejé de postergar mi vida. Me veo con un proyecto sólido, hábitos más maduros y una manera más tranquila de amar, trabajar y tomar decisiones.`,
+  'Yo en 10 años': `Ejemplo: En diez años me gustaría haber construido una vida que no dependa de aparentar. Quiero tener raíces, libertad, vínculos profundos y la paz de saber que elegí mi camino con valentía.`,
+  'Mis fantasias sociales': `Ejemplo: A veces fantaseo con entrar a un lugar y sentirme completamente aceptado, sin esforzarme por caer bien. Me gustaría vivir relaciones donde pueda ser espontáneo, admirado y querido sin tener que actuar un personaje.`,
+  'Mis fantasias espirituales': `Ejemplo: Fantaseo con sentir una conexión profunda con algo más grande que yo. No necesariamente religiosa, sino una certeza tranquila de que mi vida tiene dirección, propósito y una forma invisible de acompañamiento.`,
+  'Mis fantasias profesionales': `Ejemplo: Imagino un trabajo donde mis ideas tengan peso y no tenga que apagar mi personalidad para encajar. Me gustaría liderar algo útil, ser respetado por mi criterio y vivir de una habilidad que me represente.`,
+  'Mis fantasias economicas': `Ejemplo: Fantaseo con no sentir ansiedad al revisar mi dinero. Me veo pagando mis cosas sin miedo, ayudando a mi familia si lo necesita y tomando decisiones por deseo, no por urgencia.`,
+  'Mis fantasias romanticas': `Ejemplo: Me imagino una relación donde el amor no se sienta como persecución ni prueba constante. Fantaseo con alguien que me elija en lo cotidiano, me mire con ternura y no me haga dudar de mi lugar.`,
+  'Mis fantasias sexuales': `Ejemplo: Mis fantasías sexuales mezclan deseo, confianza y libertad. Me atrae la idea de poder hablar sin vergüenza, explorar con respeto y sentir que la otra persona también disfruta mostrarse auténtica conmigo.`,
+  'Mis fetiches': `Ejemplo: Algunos detalles despiertan en mí una atracción difícil de explicar: una forma de vestir, una actitud, una voz o una dinámica. No lo vivo solo como morbo, sino como una puerta a mi imaginación.`,
+  'Mi infancia': `Ejemplo: Mi infancia tuvo momentos dulces, pero también silencios que entendí mucho después. Recuerdo juegos, miedos y adultos que me marcaron. Creo que ahí empezó mi forma de protegerme y de buscar cariño.`,
+  'Mi adolescencia': `Ejemplo: Mi adolescencia fue una etapa de comparación y descubrimiento. Quería pertenecer, pero también diferenciarme. Muchas inseguridades nacieron ahí, igual que algunas fortalezas que todavía uso para enfrentar el mundo.`,
+  'Mi adultez': `Ejemplo: Mi adultez me obligó a dejar de esperar que alguien resolviera mi vida. He aprendido a sostener consecuencias, a elegir mejor mis batallas y a reconocer cuándo estoy actuando desde miedo o desde madurez.`,
+  'Mi primera cita': `Ejemplo: En mi primera cita estaba más nervioso de lo que admití. Recuerdo cuidar cada palabra, intentar parecer interesante y descubrir que conectar con alguien también implica mostrarse torpe y vulnerable.`,
+  'Mi última cita': `Ejemplo: Mi última cita me dejó pensando en lo diferente que soy ahora. Noté señales que antes habría ignorado, disfruté algunos momentos y también entendí mejor qué necesito para querer repetir una salida.`,
+  'Mi mejor cita': `Ejemplo: Mi mejor cita no fue perfecta por el lugar, sino por la sensación. La conversación fluyó, me sentí visto y hubo un momento en que pensé que no tenía que esforzarme para ser suficiente.`,
+  'Mi peor cita': `Ejemplo: Mi peor cita me enseñó a escuchar mi incomodidad. Hubo comentarios, silencios o actitudes que me hicieron querer irme, y aunque al principio dudé, después entendí que mi intuición estaba avisando.`,
+  'Mi peor error': `Ejemplo: Mi peor error fue insistir en algo que ya me estaba dañando. No quise aceptar señales claras porque tenía miedo de perder, y terminé aprendiendo de una forma más dolorosa de la necesaria.`,
+  'Mi acierto': `Ejemplo: Uno de mis mayores aciertos fue elegir algo que al principio nadie entendía. Me dio miedo decepcionar, pero esa decisión me acercó a una versión más honesta y firme de mí.`,
+  'Mi fracaso': `Ejemplo: Mi fracaso más importante me quitó una imagen que yo quería sostener. Me dolió aceptar que no pude, pero también me obligó a revisar mi orgullo, mis métodos y mis verdaderas prioridades.`,
+  'Mi logro': `Ejemplo: Mi logro no fue solo conseguir algo visible, sino atravesar la etapa en la que casi renuncio. Me demostró que puedo sostener un proceso incluso cuando nadie está mirando ni aplaudiendo.`,
+  'Mi arrepentimiento': `Ejemplo: Me arrepiento de no haber dicho algo a tiempo. Callé por miedo, orgullo o comodidad, y después entendí que ese silencio también fue una decisión con consecuencias para mí y para otra persona.`,
+  'Mis viajes': `Ejemplo: En mis viajes he conocido versiones mías que no aparecen en la rutina. Recuerdo un lugar donde me sentí libre, perdido y despierto al mismo tiempo, como si pudiera empezar de nuevo.`,
+  'Mis empleos': `Ejemplo: Mis empleos muestran mucho de mi relación con la responsabilidad. He tenido trabajos que me dieron disciplina, otros que me apagaron, y algunos donde entendí qué tipo de vida no quiero repetir.`,
+  'Mis aventuras': `Ejemplo: Mis aventuras suelen empezar cuando digo que sí antes de pensarlo demasiado. Algunas salieron bien y otras me dejaron lecciones, pero casi todas revelan mi necesidad de sentir que estoy vivo.`,
+  'Mis fiestas': `Ejemplo: Mis fiestas cuentan una parte social de mí: cuándo me suelto, cuándo me escondo y qué busco cuando estoy rodeado de gente. Algunas noches fueron diversión; otras, una forma de escapar.`,
+  'Mis pérdidas': `Ejemplo: Mis pérdidas me enseñaron que uno no solo pierde personas, también versiones de la vida que imaginaba. Algunas ausencias todavía duelen, pero también cambiaron mi manera de valorar lo presente.`,
+  'Mis desafíos': `Ejemplo: Mis desafíos más grandes no siempre fueron visibles. Algunos ocurrieron por dentro: levantarme, pedir ayuda, empezar de nuevo o sostener una decisión cuando todo en mí quería rendirse.`,
+  'Mis mudanzas': `Ejemplo: Mis mudanzas marcaron cierres y comienzos. Cada lugar donde viví me dejó una versión distinta de mí: lo que extrañé, lo que solté y lo que aprendí a llamar hogar.`,
+  'Mis miedos': `Ejemplo: Mis miedos no son solo cosas que evito; también explican decisiones que he tomado. Me asusta fallar, no ser elegido o quedarme atrapado, y a veces actúo intentando que eso no ocurra.`,
+  'Mis deseos': `Ejemplo: Mis deseos mezclan ambición, ternura y contradicción. Quiero libertad, amor, reconocimiento y calma, pero también estoy aprendiendo a distinguir qué deseo de verdad y qué deseo para demostrar algo.`,
+  'Mis principios económicos': `Ejemplo: Mis principios económicos nacen de haber visto lo que la falta de dinero puede hacerle a una persona. Intento cuidar, producir y compartir sin convertir el dinero en mi único valor.`,
+  'Mis principios sexuales': `Ejemplo: Mis principios sexuales se basan en deseo, consentimiento y claridad. Me importa que haya confianza, conversación y respeto, porque para mí la intimidad pierde sentido cuando alguien se siente presionado o usado.`,
+  'Mis principios sociales': `Ejemplo: Mis principios sociales tienen que ver con no humillar, no aprovecharme y no fingir cercanía por conveniencia. Valoro la lealtad, la palabra y la forma en que alguien trata a quien no necesita impresionar.`,
+  'Mis principios emocionales': `Ejemplo: Mis principios emocionales incluyen no jugar con lo que otra persona siente. Puedo equivocarme, pero intento ser claro, cuidar mis reacciones y no usar el silencio o la culpa como castigo.`,
+  'Mis límites económicos': `Ejemplo: Mis límites económicos aparecen cuando alguien confunde confianza con abuso. Puedo ayudar, invitar o compartir, pero no quiero cargar irresponsabilidades ajenas ni comprar afecto con dinero.`,
+  'Mis límites sexuales': `Ejemplo: Mis límites sexuales son importantes porque mi deseo también necesita seguridad. Hay cosas que no negocio, situaciones que me apagan y conversaciones que prefiero tener antes de llegar a la intimidad.`,
+  'Mis límites sociales': `Ejemplo: Mis límites sociales aparecen cuando siento presión para pertenecer. No quiero estar en lugares donde deba traicionarme, burlarme de otros o aceptar dinámicas que me incomodan para ser incluido.`,
+  'Mis límites emocionales': `Ejemplo: Mis límites emocionales nacieron después de permitir demasiado. Hoy intento no quedarme donde me invalidan, me confunden o me exigen una disponibilidad que termina dejándome vacío.`,
+  'Mi decisión más difícil': `Ejemplo: Mi decisión más difícil fue elegir entre lo que quería y lo que sabía que necesitaba. Me dolió porque ninguna opción era limpia, pero aprendí que madurar también es perder algo conscientemente.`,
+  'Mi decisión de la que más orgulloso estoy': `Ejemplo: Estoy orgulloso de una decisión que tomé cuando aún tenía miedo. No fue la más cómoda, pero me devolvió respeto por mí mismo y cambió la forma en que me miro.`,
+  'Mi renuncia': `Ejemplo: Mi renuncia no fue solo dejar algo, fue aceptar que seguir ahí me estaba costando demasiado. Renuncié a una expectativa, una persona o un lugar para recuperar una parte de mí.`,
+  'Mi sacrificio': `Ejemplo: Mi sacrificio tuvo un precio que no todos vieron. Dejé tiempo, comodidad o deseos personales por algo que consideraba más importante, aunque después tuve que preguntarme si valió la pena.`,
+  'Mi mayor cambio': `Ejemplo: Mi mayor cambio ocurrió cuando dejé de justificar una versión de mí que ya no funcionaba. Cambié hábitos, relaciones y prioridades, no por moda, sino porque seguir igual me dolía.`,
+  'Mi punto de quiebre': `Ejemplo: Mi punto de quiebre llegó cuando entendí que no podía seguir ignorando lo evidente. Algo dentro de mí se cansó, y aunque fue doloroso, también fue el inicio de una decisión necesaria.`,
+  'Mi pareja': `Ejemplo: Mi pareja ideal no es solo alguien que me guste, sino alguien con quien pueda descansar emocionalmente. Quiero deseo, complicidad y una forma de hablar que no convierta cada diferencia en amenaza.`,
+  'Mis parejas': `Ejemplo: Mis parejas han mostrado distintas versiones de mí: la que ama con miedo, la que intenta salvar, la que aprende a irse y la que todavía cree que el amor puede ser tranquilo.`,
+  'Mis exparejas': `Ejemplo: Mis exparejas dejaron aprendizajes que no siempre pude ver en el momento. Algunas me mostraron mis heridas, otras mis errores, y otras simplemente una etapa que ya no me representa.`,
+  'Mi expareja que más extraño': `Ejemplo: La expareja que más extraño no necesariamente fue la relación más sana. La extraño por una forma de mirarme, por una conversación pendiente o por la versión de mí que existía con ella.`,
+  'Mi amante': `Ejemplo: Mi amante representa una parte intensa, secreta o contradictoria de mi historia. Escribiría qué buscaba en esa conexión, qué me dio, qué me quitó y qué verdad mía dejó al descubierto.`,
+  'Mi enemigo': `Ejemplo: Mi enemigo me enseñó cosas que nadie cercano habría logrado mostrarme. En esa tensión vi mi orgullo, mi rabia, mi necesidad de defenderme y también partes de mí que no me gustó reconocer.`,
+  'Mi rival': `Ejemplo: Mi rival despertó una competencia que a veces me impulsó y a veces me consumió. Compararme con esa persona me mostró mis inseguridades, mi ambición y mi deseo de ser tomado en serio.`,
+  'Mi crush': `Ejemplo: Mi crush revela lo que idealizo. Me atrae una mezcla de rasgos reales e imaginados, y a veces esa ilusión habla más de mis deseos pendientes que de la persona en sí.`,
+  'Mi admirador': `Ejemplo: Mi admirador me hizo sentir visto de una manera particular. A veces me halagó, otras me incomodó, y me obligó a pensar cómo recibo el deseo o la atención de alguien más.`,
+  'Mi amor imposible': `Ejemplo: Mi amor imposible tuvo algo de deseo y algo de distancia. Tal vez no podía ser por tiempo, contexto o miedo, pero me mostró cuánto puedo imaginar alrededor de alguien que no tengo.`,
+  'Mi confidente': `Ejemplo: Mi confidente conoce partes de mí que casi nadie ve. Con esa persona he hablado sin tanta defensa, y eso revela qué necesito para sentir confianza: escucha, discreción y ausencia de juicio.`,
+  'Mi cómplice': `Ejemplo: Mi cómplice es quien entendió mi lado travieso, ambicioso o secreto sin pedirme demasiadas explicaciones. Esa relación me recuerda que también necesito juego, riesgo y una lealtad silenciosa.`,
+  'Mi persona favorita': `Ejemplo: Mi persona favorita no lo es por perfección, sino por la calma que me produce. Hay alguien cuya presencia me hace sentir más humano, más liviano o más capaz de ser yo.`,
+  'Mi terapeuta': `Ejemplo: Mi terapeuta representa una etapa en la que decidí mirarme con más honestidad. Hablar ahí me confrontó con patrones, heridas y preguntas que antes evitaba con ocupación o orgullo.`,
+  'Mi mamá': `Ejemplo: Mi mamá influyó en mi forma de amar, preocuparme y resistir. Hay cosas que le agradezco profundamente, otras que todavía me duelen, y ambas verdades conviven cuando hablo de ella.`,
+  'Mi papá': `Ejemplo: Mi papá marcó mi idea de autoridad, protección o ausencia. Escribiría sobre lo que aprendí de él, lo que me faltó y la manera en que su presencia o distancia sigue influyendo en mí.`,
+  'Mis hijos': `Ejemplo: Mis hijos me enfrentan a una responsabilidad que cambia prioridades. Hablaría de lo que despiertan en mí: ternura, miedo, orgullo y la necesidad de ser una versión más consciente de mí mismo.`,
+  'Mis hijas': `Ejemplo: Mis hijas me conectan con una forma de cuidado que exige presencia. Contaría qué quiero enseñarles, qué temo transmitirles y cómo ellas han cambiado mi manera de mirar el futuro.`,
+  'Mis hermanos': `Ejemplo: Mis hermanos conocen una versión de mí anterior a muchas máscaras. Con ellos hay historia, competencia, protección o distancia, y esa mezcla revela mucho sobre mi forma de pertenecer.`,
+  'Mis hermanas': `Ejemplo: Mis hermanas han sido espejo, refugio o conflicto en distintos momentos. Hablaría de lo que compartimos, lo que nos separó y cómo esa relación moldeó mi sensibilidad familiar.`,
+  'Mis abuelos': `Ejemplo: Mis abuelos representan raíces, historias y silencios heredados. Recuerdo gestos, frases o ausencias que me enseñaron algo sobre paciencia, dureza, cariño o la forma en que una familia sobrevive.`,
+  'Mis abuelas': `Ejemplo: Mis abuelas guardan una parte emocional de mi memoria. En ellas pienso cuando recuerdo cuidados, comidas, consejos o dolores antiguos que todavía influyen en lo que entiendo por hogar.`,
+  'Mis tíos': `Ejemplo: Mis tíos fueron figuras cercanas o lejanas que ampliaron mi idea de familia. Algunos me enseñaron con ejemplo, otros con advertencias, y cada uno dejó una impresión distinta en mi historia.`,
+  'Mis tías': `Ejemplo: Mis tías aparecen en recuerdos de cuidado, opinión, complicidad o conflicto. Hablar de ellas sería contar cómo ciertas mujeres de mi familia influyeron en mi carácter y mis formas de afecto.`,
+  'Mis primos': `Ejemplo: Mis primos fueron compañeros de etapas donde la familia también era juego, comparación o alianza. Con ellos aprendí dinámicas de pertenencia que todavía recuerdo con cariño o distancia.`,
+  'Mis primas': `Ejemplo: Mis primas forman parte de una memoria familiar más íntima. Hubo conversaciones, juegos o diferencias que me mostraron otras formas de crecer dentro del mismo árbol familiar.`,
+  'Mi suegro': `Ejemplo: Mi suegro representa una relación donde se mezclan respeto, evaluación y familia elegida. Contaría cómo me hizo sentir entrar a ese entorno y qué aprendí sobre mí en ese vínculo.`,
+  'Mi suegra': `Ejemplo: Mi suegra puede revelar mucho sobre mi forma de integrarme a una familia ajena. Hablaría de aceptación, tensión, límites y del papel que esa relación tuvo en una historia de pareja.`,
+  'Mis cuñados': `Ejemplo: Mis cuñados muestran cómo vivo los vínculos que llegan por medio de alguien más. Con ellos puede haber complicidad, distancia o roce, pero también aprendizajes sobre convivencia y respeto.`,
+  'Mis cuñadas': `Ejemplo: Mis cuñadas han sido parte de dinámicas familiares donde uno no siempre elige, pero sí aprende. Contaría qué lugar ocupé, qué afinidades aparecieron y qué límites fueron necesarios.`,
+  'Mi mejor amigo': `Ejemplo: Mi mejor amigo conoce cosas que no suelo explicar. Esa amistad me ha dado lealtad, verdad incómoda y momentos donde pude ser vulnerable sin sentir que perdía valor.`,
+  'Mi mejor amiga': `Ejemplo: Mi mejor amiga representa una confianza distinta. Con ella he podido hablar de miedo, deseo, vergüenza o alegría sin sentir que debía ordenar todo antes de decirlo.`,
+  'Mis amigos': `Ejemplo: Mis amigos revelan qué tipo de compañía elijo. Algunos están para celebrar, otros para sostener, y otros me enseñaron que no toda cercanía merece el nombre de amistad.`,
+  'Mis amigas': `Ejemplo: Mis amigas han influido en mi forma de escuchar, confiar y compartir. Con algunas aprendí ternura; con otras, límites. Cada una muestra una parte de mi mundo emocional.`,
+  'Mis vecinos': `Ejemplo: Mis vecinos dicen mucho de mi relación con la convivencia. He tenido cercanías inesperadas, molestias pequeñas y momentos donde entendí que vivir cerca no siempre significa conocerse.`,
+  'Mis vecinas': `Ejemplo: Mis vecinas aparecen en mi memoria como presencias cotidianas: saludos, rumores, ayudas o tensiones. Escribiría cómo esas relaciones pequeñas también forman una idea de comunidad.`,
+  'Mi jefe': `Ejemplo: Mi jefe me mostró cómo reacciono frente a la autoridad. Dependiendo de la experiencia, aprendí obediencia, resistencia, ambición o la importancia de no entregar mi dignidad por aprobación.`,
+  'Mi líder': `Ejemplo: Mi líder ideal, o el que más me marcó, me hizo entender que guiar no es imponer. Contaría cómo esa figura despertó en mí disciplina, confianza o ganas de mejorar.`,
+  'Mis socios': `Ejemplo: Mis socios revelan cómo negocio confianza, riesgo y visión compartida. Con ellos he aprendido que una idea puede unir, pero el carácter de cada persona decide si algo se sostiene.`,
+  'Mis socias': `Ejemplo: Mis socias han marcado mi forma de colaborar y repartir responsabilidades. Hablaría de acuerdos, desacuerdos y de lo que descubrí sobre mi manera de confiar en el criterio de otra persona.`,
+  'Mis empleados': `Ejemplo: Mis empleados me obligan a pensar en responsabilidad, claridad y trato justo. Escribiría qué tipo de autoridad quiero ejercer y qué errores he cometido al dirigir o delegar.`,
+  'Mis empleadas': `Ejemplo: Mis empleadas han mostrado mi forma de liderar, cuidar límites y reconocer trabajo ajeno. Contaría qué aprendí sobre respeto, comunicación y el poder que uno tiene sobre el ambiente de otros.`,
+  'Mis clientes': `Ejemplo: Mis clientes me han enseñado paciencia, negociación y criterio. Algunos me impulsaron a mejorar; otros me mostraron la importancia de poner límites sin perder profesionalismo.`,
+  'Mis clientas': `Ejemplo: Mis clientas han revelado cómo manejo expectativas, confianza y servicio. Contaría una experiencia donde entendí que vender o atender también implica escuchar y sostener una promesa.`,
+  'Mis compañeros de trabajo': `Ejemplo: Mis compañeros de trabajo muestran cómo soy en equipo. He conocido alianzas, envidias, aprendizajes y personas que hicieron más llevadera una etapa laboral difícil.`,
+  'Mis compañeras de trabajo': `Ejemplo: Mis compañeras de trabajo han sido apoyo, inspiración o desafío. Escribiría sobre dinámicas de colaboración, competencia y respeto que me enseñaron mucho sobre convivencia profesional.`,
+  'Mis profesores': `Ejemplo: Mis profesores dejaron frases, exigencias o gestos que todavía recuerdo. Algunos despertaron curiosidad; otros me hicieron dudar de mí. Todos influyeron en mi relación con aprender.`,
+  'Mis profesoras': `Ejemplo: Mis profesoras marcaron mi manera de mirar ciertas materias y también mi confianza. Hubo una que me exigió, otra que me escuchó y alguna que me hizo sentir capaz.`,
+  'Mis alumnos': `Ejemplo: Mis alumnos me han enseñado que explicar algo exige humildad. Con ellos he visto paciencia, frustración y la responsabilidad de no apagar la curiosidad de alguien que intenta aprender.`,
+  'Mis alumnas': `Ejemplo: Mis alumnas me recuerdan que enseñar también es cuidar una voz que está creciendo. Contaría una experiencia donde aprendí de sus preguntas, su esfuerzo o su manera de mirar el mundo.`,
+  'Mis mentores': `Ejemplo: Mis mentores aparecieron cuando necesitaba dirección. No todos fueron suaves, pero algunos me dieron una frase, una oportunidad o una corrección que cambió mi manera de avanzar.`,
+  'Mis mentoras': `Ejemplo: Mis mentoras me han mostrado caminos posibles con inteligencia y carácter. Hablaría de una mujer que me enseñó a confiar más en mi criterio y a tomarme en serio.`,
+  'Mi sexualidad': `Ejemplo: Mi sexualidad ha sido una mezcla de descubrimiento, pudor, deseo y preguntas. Escribiría cómo la vivo, qué me da confianza y qué cosas todavía estoy aprendiendo a nombrar sin vergüenza.`,
+  'Mi dinero': `Ejemplo: Mi dinero revela mis miedos y mis prioridades. A veces lo cuido por ansiedad, otras lo gasto para sentir libertad, y todavía aprendo a usarlo sin que defina mi valor.`,
+  'Mi fidelidad': `Ejemplo: Mi fidelidad no es solo no traicionar; es decidir cómo cuido un acuerdo cuando aparece la tentación, la distancia o el aburrimiento. Contaría qué entiendo por lealtad real.`,
+  'Mi familia': `Ejemplo: Mi familia es una mezcla de amor, historia, heridas y costumbres. Hay cosas que agradezco y otras que intento no repetir, porque de ahí viene mucho de mi forma de vincularme.`,
+  'Mi trabajo': `Ejemplo: Mi trabajo no solo paga cuentas; también afecta mi autoestima. Escribiría qué busco en lo profesional, qué me agota y qué tipo de esfuerzo me hace sentir orgulloso.`,
+  'Mi salud': `Ejemplo: Mi salud me ha obligado a escuchar señales que antes ignoraba. Contaría cómo cuido o descuido mi cuerpo, qué miedos tengo y qué aprendí cuando no pude seguir funcionando igual.`,
+  'Mi cuerpo': `Ejemplo: Mi cuerpo ha sido hogar, conflicto y memoria. Hay partes que acepto, otras que critiqué demasiado, y experiencias que cambiaron la forma en que me miro y me presento.`,
+  'Mi mente': `Ejemplo: Mi mente puede ser mi aliada y mi cárcel. Pienso mucho, a veces demasiado, y escribiría cómo manejo mis ideas, mis obsesiones, mis intuiciones y mis momentos de claridad.`,
+  'Mi rutina': `Ejemplo: Mi rutina muestra lo que realmente priorizo, no lo que digo priorizar. Hablaría de mis mañanas, mis distracciones, mis pequeños rituales y las partes de mi día que quiero cambiar.`,
+  'Mi deporte': `Ejemplo: Mi deporte me conecta con disciplina, competencia o liberación. Contaría qué siento al entrenar, qué me ha enseñado sobre mi cuerpo y qué parte de mi carácter aparece cuando me exijo.`,
+  'Mi arte': `Ejemplo: Mi arte es la forma en que saco algo que no siempre sé explicar. Puede ser dibujo, música, escritura o mirada; ahí aparece una sensibilidad que en otros contextos escondo.`,
+  'Mi talento': `Ejemplo: Mi talento no siempre fue evidente para mí. Alguien lo notó antes, o apareció cuando insistí en algo que disfrutaba. Escribiría cómo lo uso y qué miedo tengo de desperdiciarlo.`,
+  'Mi vicio': `Ejemplo: Mi vicio revela una forma de escapar. No lo contaría solo para confesarlo, sino para explicar qué vacío, ansiedad o placer intento calmar cuando vuelvo a eso.`,
+  'Mi debilidad': `Ejemplo: Mi debilidad aparece cuando algo toca una herida precisa. Puede ser aprobación, abandono, orgullo o miedo; escribiría cómo me afecta y qué estoy intentando entender de esa reacción.`,
+  'Mi fortaleza': `Ejemplo: Mi fortaleza no es que nada me duela, sino que he seguido incluso con miedo. Contaría una situación donde descubrí que podía resistir más de lo que imaginaba.`,
+  'Mi yo deseado': `Ejemplo: Mi yo deseado es alguien más honesto, disciplinado y tranquilo. No quiero convertirme en otra persona, sino dejar de traicionarme en decisiones pequeñas que terminan definiendo mi vida.`,
+  'Mi cuerpo deseado': `Ejemplo: Mi cuerpo deseado no es solo una imagen; es sentirme cómodo habitándolo. Quiero fuerza, salud y confianza, pero también dejar de tratarme como un proyecto que nunca está terminado.`,
+  'Mi mente deseada': `Ejemplo: Mi mente deseada sería más clara y menos cruel conmigo. Me gustaría pensar con profundidad sin caer en ansiedad, decidir sin tanta culpa y descansar sin sentir que pierdo tiempo.`,
+  'Mi vida deseada': `Ejemplo: Mi vida deseada tiene libertad, vínculos sinceros y días que no sienta que estoy sobreviviendo. Me imagino creando, amando y trabajando desde una calma que todavía estoy construyendo.`,
+  'Mi propósito': `Ejemplo: Mi propósito parece aparecer cuando siento que lo que hago puede servirle a alguien más. No lo tengo completamente resuelto, pero sé que necesito crear algo con sentido.`,
+  'Mi proyecto de vida': `Ejemplo: Mi proyecto de vida combina independencia, amor y construcción. Quiero una vida donde mis decisiones económicas, afectivas y creativas apunten en la misma dirección, aunque todavía esté aprendiendo cómo lograrlo.`,
+  'Mi futuro': `Ejemplo: Mi futuro me emociona y me asusta. Hay días en que lo veo amplio y otros en que lo siento incierto, pero quiero llegar ahí sin abandonar las partes más verdaderas de mí.`,
+  'Mi legado': `Ejemplo: Mi legado no tendría que ser fama; me bastaría dejar una huella honesta. Quiero que algunas personas recuerden que las cuidé, que creé algo útil o que viví con intención.`,
+  'Mi relación con la ciencia': `Ejemplo: Mi relación con la ciencia mezcla curiosidad y respeto. Me interesa cómo explica lo que antes parecía misterio, aunque también me recuerda que muchas certezas pueden cambiar con nueva evidencia.`,
+  'Mi relación con la historia': `Ejemplo: La historia me hace sentir que no nací en el vacío. Me interesa entender de dónde vienen las ideas, las heridas y las decisiones colectivas que todavía afectan mi vida.`,
+  'Mi relación con la educación': `Ejemplo: La educación para mí ha sido oportunidad y también frustración. He aprendido en aulas, errores y conversaciones; por eso no reduzco la inteligencia a diplomas, aunque valore estudiar.`,
+  'Mi relación con la medicina': `Ejemplo: La medicina me despierta gratitud y preguntas. He visto cómo puede aliviar, pero también cómo una persona enferma necesita ser escuchada, no tratada solo como un caso.`,
+  'Mi relación con la tecnología': `Ejemplo: La tecnología me atrae porque amplifica capacidades, pero también me inquieta cuando reemplaza presencia o criterio. La uso, la disfruto y al mismo tiempo intento no entregarle toda mi atención.`,
+  'Mi relación con la economía': `Ejemplo: La economía dejó de parecerme abstracta cuando entendí cómo afecta comida, tiempo y dignidad. Me interesa porque muestra qué valoramos realmente como sociedad, incluso cuando no lo admitimos.`,
+  'Mi relación con la política': `Ejemplo: La política me importa porque decide cosas íntimas aunque parezcan lejanas. Me cuesta la manipulación, pero no quiero desentenderme de temas que afectan derechos, oportunidades y convivencia.`,
+  'Mi relación con la religión': `Ejemplo: La religión en mi vida ha sido pregunta, herencia o refugio según la etapa. Hay símbolos que respeto, ideas que cuestiono y experiencias que me hicieron pensar en lo sagrado.`,
+  'Mi relación con la geografía': `Ejemplo: La geografía me recuerda que el lugar donde nacemos cambia oportunidades, acentos, miedos y sueños. Me interesa cómo un territorio puede formar carácter sin que uno lo note.`,
+  'Mi relación con la filosofía': `Ejemplo: La filosofía me acompaña cuando una respuesta práctica no basta. Me gusta porque obliga a preguntar por sentido, libertad, muerte y verdad, aunque a veces incomode vivir con tantas preguntas.`,
+  'Mi relación con la psicología': `Ejemplo: La psicología me ayudó a mirar conductas que antes juzgaba sin entender. Me interesa porque revela patrones, heridas y formas de sanar que no siempre son visibles desde afuera.`,
+  'Mi relación con el derecho': `Ejemplo: El derecho me parece una forma de ordenar conflictos humanos. Me interesa cuando protege al vulnerable, pero me inquieta cuando se vuelve lenguaje frío para injusticias muy reales.`,
+  'Mi relación con las finanzas': `Ejemplo: Las finanzas me enseñan que libertad también requiere orden. Me interesa aprender a decidir mejor con el dinero, no para vivir obsesionado, sino para no depender siempre de la urgencia.`,
+  'Mi relación con el emprendimiento': `Ejemplo: El emprendimiento me atrae porque combina riesgo, creatividad y carácter. Me entusiasma construir algo propio, aunque sé que también exige tolerar incertidumbre, ventas, errores y soledad.`,
+  'Mi relación con el liderazgo': `Ejemplo: El liderazgo para mí no es mandar más fuerte. Admiro a quien da dirección sin humillar, escucha sin perder firmeza y sabe asumir responsabilidad cuando las cosas salen mal.`,
+  'Mi relación con la comunicación': `Ejemplo: La comunicación me importa porque muchas heridas nacen de lo que no se dijo bien. Estoy aprendiendo a expresar límites, deseos y desacuerdos sin esconderme ni atacar.`,
+  'Mi relación con el arte': `Ejemplo: El arte me conecta con emociones que no siempre caben en una explicación. Una canción, imagen o escena puede hacerme entender algo de mí antes de poder decirlo.`,
+  'Mi relación con la música': `Ejemplo: La música ordena recuerdos que yo no sabía dónde guardar. Hay canciones que me devuelven a personas, etapas y versiones mías que todavía viven en algún lugar interno.`,
+  'Mi relación con el deporte': `Ejemplo: El deporte me enseña disciplina y presencia. Cuando entreno o compito, aparecen mi paciencia, mi frustración y mi manera de medir progreso sin depender solo del resultado.`,
+  'Mi relación con la gastronomía': `Ejemplo: La gastronomía para mí es memoria y encuentro. Un sabor puede llevarme a una casa, una persona o una etapa, y cocinar también puede ser una forma de cuidar.`,
+  'Mi relación con la agricultura': `Ejemplo: La agricultura me conecta con paciencia, tierra y origen. Me recuerda que no todo crece al ritmo que uno quiere y que detrás de cada alimento hay trabajo invisible.`,
+  'Mi relación con el medio ambiente': `Ejemplo: El medio ambiente me importa porque no es un tema lejano; es el aire, el agua y el futuro. A veces me siento incoherente, pero intento tomar más conciencia de mi impacto.`,
+  'Mi relación con los idiomas': `Ejemplo: Los idiomas me atraen porque cada lengua abre una forma distinta de pensar. Aprender palabras nuevas me hace sentir que también puedo habitar otras culturas y versiones de mí.`,
+  'Mi relación con la programación': `Ejemplo: La programación me gusta porque convierte ideas en herramientas. Me frustra cuando algo falla, pero también me emociona esa sensación de construir lógica que otra persona puede usar.`,
+  'Mi relación con la inteligencia artificial': `Ejemplo: La inteligencia artificial me provoca fascinación y cautela. Veo posibilidades enormes para crear y aprender, pero también me pregunto qué partes humanas no deberíamos delegar sin pensar.`,
+  'Mi relación con las inversiones': `Ejemplo: Las inversiones me interesan porque obligan a pensar en paciencia, riesgo y futuro. Estoy aprendiendo a no confundir ambición con apuestas impulsivas ni seguridad con miedo a crecer.`,
+  'Mi mejor consejo': `Ejemplo: Mi mejor consejo sería no negociar tu paz para sostener una imagen. Lo aprendí tarde, después de intentar agradar, demostrar y permanecer en lugares donde ya no me reconocía.`,
+  'Mi prototipo físico de pareja': `Ejemplo: Mi prototipo físico de pareja incluye rasgos que me atraen, pero no se reduce a medidas. Me importa una presencia, una forma de moverse y una energía que despierte deseo y calma.`,
+  'Mi prototipo de personalidad de pareja': `Ejemplo: Mi prototipo de personalidad de pareja es alguien claro, curioso y afectivamente responsable. Me atrae la gente que sabe conversar, pedir perdón, sostener deseo y no convertir todo en competencia.`,
+  'Mi comida': `Ejemplo: Mi comida favorita me conecta con recuerdos específicos. No es solo sabor; es una mesa, una persona, una etapa de mi vida y una sensación de hogar que aparece al probarla.`,
+  'Mi música': `Ejemplo: Mi música dice mucho de mis estados internos. Hay canciones para mi tristeza, para mi ego, para mi deseo y para esos momentos en que necesito sentirme acompañado sin hablar.`,
+  'Mi película': `Ejemplo: Mi película favorita me marcó porque vi algo mío en un personaje o una escena. Cada vez que la recuerdo, entiendo mejor un miedo, una esperanza o una forma de mirar la vida.`,
+  'Mi serie': `Ejemplo: Mi serie favorita me atrapó porque sus personajes crecían, fallaban y se contradecían como personas reales. Creo que me gustó porque acompañó una etapa concreta de mi vida.`,
+  'Mi libro': `Ejemplo: Mi libro favorito me encontró en un momento donde necesitaba palabras para algo que no sabía explicar. Lo recuerdo por una idea que me cambió la forma de entenderme.`,
+  'Mi color': `Ejemplo: Mi color favorito tiene una emoción asociada. Lo elijo porque me transmite calma, fuerza, misterio o alegría, y de alguna manera siento que representa una parte de mi temperamento.`,
+  'Mi estilo': `Ejemplo: Mi estilo muestra cómo quiero presentarme sin tener que explicarlo todo. A veces busco comodidad, otras impacto, y otras simplemente vestir una versión de mí que necesito sentir cerca.`,
+  'Mi hogar': `Ejemplo: Mi hogar no es solo un lugar; es una sensación de seguridad. Lo imagino con ciertos olores, silencios, personas y rutinas que me permitan bajar la guardia.`,
+  'Mi ciudad': `Ejemplo: Mi ciudad me formó con su ritmo, sus oportunidades y sus límites. Hay partes que amo, partes que critico y recuerdos que solo tienen sentido porque ocurrieron en esas calles.`,
+  'Mi casa': `Ejemplo: Mi casa ideal tendría espacios donde pudiera descansar, crear y compartir sin sentir invasión. Más que lujo, quiero una casa que refleje calma, identidad y cierta libertad cotidiana.`,
+  'Mi habitación': `Ejemplo: Mi habitación revela mi intimidad: lo que dejo a la vista, lo que escondo y cómo descanso. Es el lugar donde más se nota mi orden, mi caos y mi necesidad de refugio.`,
+  'Mi mascota': `Ejemplo: Mi mascota me enseñó una forma de amor simple y constante. Hablaría de sus gestos, de cómo cambió mis días y de lo que me mostró sobre cuidado y compañía.`,
+  'Mi proyecto': `Ejemplo: Mi proyecto representa una apuesta por algo que todavía no existe del todo. Me emociona porque mezcla esfuerzo, miedo y visión, y porque siento que ahí pongo una parte auténtica de mí.`,
+  'Mi comunidad': `Ejemplo: Mi comunidad es el grupo donde siento pertenencia o deseo sentirla. Contaría qué compartimos, qué me aporta y qué responsabilidades aparecen cuando uno deja de pensar solo en sí mismo.`,
+  'Mi invento': `Ejemplo: Mi invento sería una solución para algo que me ha molestado o dolido durante años. Lo imaginaría útil, humano y nacido de una necesidad que conozco de cerca.`,
+  'Mi Dios': `Ejemplo: Mi Dios, si intento nombrarlo, no cabe del todo en una doctrina. Lo relaciono con presencia, misterio, justicia o consuelo, y también con preguntas que todavía no sé responder.`,
+  'Mi Diablo': `Ejemplo: Mi Diablo representa aquello que me tienta, me divide o me empuja a traicionarme. No lo veo solo como mal externo, sino como una parte oscura que debo reconocer.`,
+  'Mi bien': `Ejemplo: Mi bien está en las decisiones que me acercan a la paz y al cuidado. Para mí hacer el bien no siempre es agradar, a veces es decir una verdad incómoda.`,
+  'Mi mal': `Ejemplo: Mi mal aparece cuando actúo desde resentimiento, ego o miedo. No me gusta admitirlo, pero sé que tengo sombras capaces de herir si no las miro con honestidad.`,
+  'Mi creencia': `Ejemplo: Mi creencia más fuerte es que una persona puede cambiar si se mira sin mentirse. Esa idea me sostiene porque he visto cómo una decisión honesta puede romper patrones viejos.`,
+  'Mi religión': `Ejemplo: Mi religión, o mi distancia con ella, está marcada por experiencias familiares, dudas y momentos de búsqueda. Hablaría de lo que conservo, lo que rechazo y lo que todavía me conmueve.`,
+  'Mi política': `Ejemplo: Mi política nace de lo que considero justo y de lo que he visto faltar. No quiero repetir consignas; prefiero explicar qué experiencias formaron mi postura y qué contradicciones reconozco.`,
+  'Mi ángel': `Ejemplo: Mi ángel sería esa parte de mí que intenta cuidar, perdonar y seguir creyendo. Aparece cuando alguien necesita ayuda o cuando decido no responder desde mi peor impulso.`,
+  'Mi demonio': `Ejemplo: Mi demonio es la voz que exagera mi orgullo, mi deseo de control o mi rabia. No siempre gana, pero conocerlo me ayuda a no fingir que soy puro.`,
+  'Mi pecado': `Ejemplo: Mi pecado tiene que ver con una tendencia que repito aunque sepa que me hace daño. Puede ser soberbia, deseo, evasión o silencio, y quiero entender qué busca proteger.`,
+  'Mis ídolos': `Ejemplo: Mis ídolos muestran lo que admiro y lo que quisiera desarrollar en mí. No los veo perfectos; me interesan por su talento, valentía, disciplina o forma de sostener una visión.`,
 }
+
+const getWritingExample = (prompt) =>
+  writingExamples[prompt] ??
+  `Ejemplo: Escribiría una experiencia concreta relacionada con ${prompt.toLocaleLowerCase('es-CO')}, explicando qué pasó, cómo me marcó y qué revela de mí hoy.`
 
 const createQuestion = (prompt, index) => ({
   id: index + 1,
