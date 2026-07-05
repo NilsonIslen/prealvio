@@ -187,7 +187,7 @@ const fields = [
 ]
 
 const writingExamples = {
-  'Mi autobiografía': `Ejemplo: Nací en una familia donde aprendí temprano a observar antes de hablar. Mi historia tiene mudanzas, errores, amores y decisiones que me fueron volviendo más consciente de quién soy y de lo que no quiero repetir.`,
+  'Mi autobiografía': `Ejemplo: Mi nombre es Andrés Martínez. Nací en Medellín el 14 de mayo de 1994. Viví allí hasta 2008, luego me mudé con mi familia a Bogotá, donde terminé el colegio y empecé a trabajar. En 2016 cambié de ciudad otra vez, esta vez por decisión propia, y desde entonces mi vida ha estado marcada por independencia, aprendizaje y varios comienzos difíciles.`,
   'Yo en 3 años': `Ejemplo: En tres años me imagino con más estabilidad emocional y económica. Quiero estar trabajando en algo propio, rodeado de relaciones más sanas y con la sensación de que las decisiones difíciles de hoy tuvieron sentido.`,
   'Yo en 5 años': `Ejemplo: En cinco años quiero mirar atrás y sentir que dejé de postergar mi vida. Me veo con un proyecto sólido, hábitos más maduros y una manera más tranquila de amar, trabajar y tomar decisiones.`,
   'Yo en 10 años': `Ejemplo: En diez años me gustaría haber construido una vida que no dependa de aparentar. Quiero tener raíces, libertad, vínculos profundos y la paz de saber que elegí mi camino con valentía.`,
