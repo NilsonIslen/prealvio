@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Check,
   Copy,
@@ -96,7 +96,6 @@ type QuestionTextContent = {
 
 type PaymentIntent = {
   intentId: string
-  unlockToken?: string
   receiverAddress: string
   amountNano: string
   expiresAt: string
@@ -115,9 +114,6 @@ const getAuthHeaders = (authToken: string): Record<string, string> => {
   if (!authToken || authToken === COOKIE_SESSION) return {}
   return { Authorization: `Bearer ${authToken}` }
 }
-
-const getUnlockIntentStorageKey = (profileId: string, answerId: number) =>
-  `revelox-unlock-intent:${profileId}:${answerId}`
 
 const getAnswerAccessKey = (answer: {
   id: number
@@ -196,34 +192,6 @@ const applyStoredDrafts = (questions: Question[], profileId: string) => {
       return question
     }
   })
-}
-
-const getStoredUnlockIntent = (profileId: string) => {
-  const prefix = `revelox-unlock-intent:${profileId}:`
-
-  for (let index = 0; index < localStorage.length; index += 1) {
-    const key = localStorage.key(index)
-
-    if (!key?.startsWith(prefix)) continue
-
-    try {
-      const intent = JSON.parse(localStorage.getItem(key) ?? '') as PaymentIntent
-      const answerId = Number(key.slice(prefix.length))
-
-      if (
-        Number.isInteger(answerId) &&
-        new Date(intent.expiresAt).getTime() > Date.now()
-      ) {
-        return { answerId, intent }
-      }
-
-      localStorage.removeItem(key)
-    } catch {
-      localStorage.removeItem(key)
-    }
-  }
-
-  return null
 }
 
 const initialQuestions: Question[] = [
@@ -466,45 +434,16 @@ function LoadingPanel({ message }: { message: string }) {
 }
 
 function PublicProfilePage({ profileId }: { profileId: string }) {
-  const [storedUnlockIntent] = useState(() => getStoredUnlockIntent(profileId))
-  const [authToken, setAuthToken] = useState(
-    () => localStorage.getItem('revelox-auth-token') ?? '',
-  )
-  const [viewerProfileId, setViewerProfileId] = useState(
-    () => localStorage.getItem('revelox-profile-id') ?? '',
-  )
-  const [loginIntent, setLoginIntent] = useState<PaymentIntent | null>(
-    getStoredLoginIntent,
-  )
   const [profile, setProfile] = useState<PublicProfile | null>(null)
   const [loadError, setLoadError] = useState('')
-  const [pendingAnswerId, setPendingAnswerId] = useState<number | null>(
-    storedUnlockIntent?.answerId ?? null,
-  )
-  const [paymentIntent, setPaymentIntent] = useState<PaymentIntent | null>(
-    storedUnlockIntent?.intent ?? null,
-  )
-  const [unlockedAnswers, setUnlockedAnswers] = useState<Record<string, string>>({})
+  const [pendingAnswerId, setPendingAnswerId] = useState<number | null>(null)
+  const [paymentIntent, setPaymentIntent] = useState<PaymentIntent | null>(null)
+  const [revealedAnswers, setRevealedAnswers] = useState<Record<string, string>>({})
   const [copiedAnswerId, setCopiedAnswerId] = useState<number | null>(null)
-  const [authState, setAuthState] = useState<RequestState>({
-    loading: false,
-    error: '',
-  })
   const [requestState, setRequestState] = useState<RequestState>({
     loading: false,
     error: '',
   })
-  const isLoggedIn = Boolean(authToken)
-  const isOwnerViewing = Boolean(viewerProfileId && viewerProfileId === profileId)
-
-  const cacheUnlockedAnswer = useCallback((
-    answer: PublicProfile['answers'][number],
-    value: string,
-  ) => {
-    setUnlockedAnswers((current) => {
-      return { ...current, [getAnswerAccessKey(answer)]: value }
-    })
-  }, [])
 
   useEffect(() => {
     let active = true
@@ -513,7 +452,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
         .then((nextProfile) => {
           if (!active) return
           setProfile(nextProfile)
-          setUnlockedAnswers((current) => {
+          setRevealedAnswers((current) => {
             const validKeys = new Set(
               nextProfile.answers.map((answer) => getAnswerAccessKey(answer)),
             )
@@ -521,25 +460,6 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
               Object.entries(current).filter(([key]) => validKeys.has(key)),
             )
           })
-          if (authToken) {
-            nextProfile.answers.forEach((answer) => {
-              void apiRequest<{ answer: string }>(
-                `/api/profiles/${profileId}/answers/${answer.id}/unlock`,
-                {
-                  method: 'POST',
-                  headers: getAuthHeaders(authToken),
-                  body: '{}',
-                },
-              )
-                .then((data) => {
-                  if (!active) return
-                  cacheUnlockedAnswer(answer, data.answer)
-                })
-                .catch(() => undefined)
-            })
-          } else {
-            setUnlockedAnswers({})
-          }
           setLoadError('')
         })
         .catch((error: unknown) => {
@@ -556,165 +476,19 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
       active = false
       window.clearInterval(interval)
     }
-  }, [profileId, authToken, cacheUnlockedAnswer])
-
-  const requestLogin = async () => {
-    setAuthState({ loading: true, error: '' })
-
-    try {
-      const intent = await apiRequest<PaymentIntent>('/api/auth/start', {
-        method: 'POST',
-        body: '{}',
-      })
-      setLoginIntent(intent)
-      localStorage.setItem(LOGIN_INTENT_STORAGE_KEY, JSON.stringify(intent))
-      setAuthState({ loading: false, error: '' })
-      openNanoPayment(intent.receiverAddress, intent.amountNano)
-    } catch (error) {
-      setAuthState({
-        loading: false,
-        error:
-          error instanceof Error ? error.message : 'No se pudo iniciar el pago',
-      })
-    }
-  }
-
-  useEffect(() => {
-    if (!loginIntent || authToken) return
-
-    let active = true
-    let checking = false
-    const verifyPayment = async () => {
-      if (checking) return
-      checking = true
-
-      try {
-        const data = await apiRequest<{
-          token: string
-          ownerAddress: string
-          profileId: string
-        }>('/api/auth/verify', {
-          method: 'POST',
-          body: JSON.stringify({ intentId: loginIntent.intentId }),
-        })
-
-        if (!active) return
-
-        localStorage.setItem('revelox-auth-token', data.token)
-        localStorage.setItem('revelox-profile-id', data.profileId)
-        localStorage.removeItem(LOGIN_INTENT_STORAGE_KEY)
-        setAuthToken(data.token)
-        setViewerProfileId(data.profileId)
-        setLoginIntent(null)
-        setAuthState({ loading: false, error: '' })
-      } catch (error) {
-        if (!active) return
-
-        const message =
-          error instanceof Error ? error.message : 'Esperando confirmación'
-
-        if (message.includes('venció') || message.includes('utilizado')) {
-          localStorage.removeItem(LOGIN_INTENT_STORAGE_KEY)
-          setLoginIntent(null)
-          setAuthState({ loading: false, error: message })
-        }
-      } finally {
-        checking = false
-      }
-    }
-
-    void verifyPayment()
-    const interval = window.setInterval(verifyPayment, 12000)
-
-    return () => {
-      active = false
-      window.clearInterval(interval)
-    }
-  }, [authToken, loginIntent])
-
-  const retryLoginPayment = () => {
-    localStorage.removeItem(LOGIN_INTENT_STORAGE_KEY)
-    setLoginIntent(null)
-    setAuthState({ loading: false, error: '' })
-  }
-
-  const logoutReader = async () => {
-    try {
-      await apiRequest('/api/auth/logout', {
-        method: 'POST',
-        headers: getAuthHeaders(authToken),
-        body: '{}',
-      })
-    } finally {
-      localStorage.removeItem('revelox-auth-token')
-      localStorage.removeItem('revelox-profile-id')
-      localStorage.removeItem(LOGIN_INTENT_STORAGE_KEY)
-      setAuthToken('')
-      setViewerProfileId('')
-      setLoginIntent(null)
-      setUnlockedAnswers({})
-      setPendingAnswerId(null)
-      setPaymentIntent(null)
-      setAuthState({ loading: false, error: '' })
-      setRequestState({ loading: false, error: '' })
-    }
-  }
-
-  useEffect(() => {
-    apiRequest<PrivateProfile>('/api/me', {
-      headers: getAuthHeaders(authToken),
-    })
-      .then((profile) => {
-        if (!authToken) setAuthToken(COOKIE_SESSION)
-        localStorage.setItem('revelox-profile-id', profile.id)
-        setViewerProfileId(profile.id)
-      })
-      .catch(() => {
-        localStorage.removeItem('revelox-auth-token')
-        localStorage.removeItem('revelox-profile-id')
-        setAuthToken('')
-        setViewerProfileId('')
-        setUnlockedAnswers({})
-      })
-  }, [authToken])
+  }, [profileId])
 
   const beginUnlock = async (answerId: number) => {
-    if (!authToken) {
-      setRequestState({
-        loading: false,
-        error:
-          'Inicia sesión con Nano para desbloquear. El acceso quedará asociado a tu dirección Nano.',
-      })
-      return
-    }
-
     setRequestState({ loading: true, error: '' })
 
     try {
-      const intent = await apiRequest<
-        PaymentIntent & { alreadyUnlocked?: boolean; answer?: string }
-      >(
+      const intent = await apiRequest<PaymentIntent>(
         `/api/profiles/${profileId}/answers/${answerId}/unlock/start`,
-        {
-          method: 'POST',
-          headers: getAuthHeaders(authToken),
-          body: '{}',
-        },
+        { method: 'POST', body: '{}' },
       )
-
-      if (intent.alreadyUnlocked && intent.answer && profile) {
-        const answer = profile.answers.find((item) => item.id === answerId)
-        if (answer) cacheUnlockedAnswer(answer, intent.answer)
-        setRequestState({ loading: false, error: '' })
-        return
-      }
 
       setPaymentIntent(intent)
       setPendingAnswerId(answerId)
-      localStorage.setItem(
-        getUnlockIntentStorageKey(profileId, answerId),
-        JSON.stringify(intent),
-      )
       setRequestState({ loading: false, error: '' })
       openNanoPayment(intent.receiverAddress, intent.amountNano)
     } catch (error) {
@@ -727,7 +501,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
   }
 
   useEffect(() => {
-    if (!paymentIntent || pendingAnswerId === null || !profile || !authToken) return
+    if (!paymentIntent || pendingAnswerId === null || !profile) return
 
     let active = true
     let checking = false
@@ -740,10 +514,8 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
           `/api/profiles/${profileId}/answers/${pendingAnswerId}/unlock`,
           {
             method: 'POST',
-            headers: getAuthHeaders(authToken),
             body: JSON.stringify({
               intentId: paymentIntent.intentId,
-              unlockToken: paymentIntent.unlockToken,
             }),
           },
         )
@@ -751,10 +523,12 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
         if (!active) return
 
         const answer = profile.answers.find((item) => item.id === pendingAnswerId)
-        if (answer) cacheUnlockedAnswer(answer, data.answer)
-        localStorage.removeItem(
-          getUnlockIntentStorageKey(profileId, pendingAnswerId),
-        )
+        if (answer) {
+          setRevealedAnswers((current) => ({
+            ...current,
+            [getAnswerAccessKey(answer)]: data.answer,
+          }))
+        }
         setPendingAnswerId(null)
         setPaymentIntent(null)
         setRequestState({ loading: false, error: '' })
@@ -765,9 +539,6 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
           error instanceof Error ? error.message : 'Esperando confirmación'
 
         if (message.includes('venció') || message.includes('utilizado')) {
-          localStorage.removeItem(
-            getUnlockIntentStorageKey(profileId, pendingAnswerId),
-          )
           setPendingAnswerId(null)
           setPaymentIntent(null)
           setRequestState({ loading: false, error: message })
@@ -784,28 +555,15 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
       active = false
       window.clearInterval(interval)
     }
-  }, [
-    paymentIntent,
-    pendingAnswerId,
-    profileId,
-    profile,
-    authToken,
-    cacheUnlockedAnswer,
-  ])
+  }, [paymentIntent, pendingAnswerId, profileId, profile])
 
   const retryUnlockPayment = () => {
-    if (pendingAnswerId !== null) {
-      localStorage.removeItem(
-        getUnlockIntentStorageKey(profileId, pendingAnswerId),
-      )
-    }
-
     setPendingAnswerId(null)
     setPaymentIntent(null)
     setRequestState({ loading: false, error: '' })
   }
 
-  const copyUnlockedAnswer = async (answerId: number, answer: string) => {
+  const copyRevealedAnswer = async (answerId: number, answer: string) => {
     await copyText(answer)
     setCopiedAnswerId(answerId)
   }
@@ -839,117 +597,24 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
     <main className="app-shell public-shell">
       <header className="topbar">
         <Brand />
-        <div className="public-topbar-actions">
-          {isLoggedIn && (
-            <button
-              className="session-pill verified"
-              type="button"
-              onClick={logoutReader}
-            >
-              <LogOut size={16} />
-              Cerrar sesión
-            </button>
-          )}
-          <a className="header-link" href={window.location.pathname}>
-            <UserRound size={18} />
-            Crear mi perfil
-          </a>
-        </div>
+        <a className="header-link" href={window.location.pathname}>
+          <UserRound size={18} />
+          Crear mi perfil
+        </a>
       </header>
 
       <section className="profile-hero">
         <div className="profile-avatar">
           <img src="/favicon.png" alt="" aria-hidden="true" />
         </div>
-        <p>
-          Si no logras asociar este perfil, asume que pertenece a quien te
-          compartió el enlace o consúltale directamente.
-        </p>
-        <div className="public-profile-actions">
-          <div className="wallet-help">
-            <a
-              className={!xnoCreatorStoreUrl ? 'unavailable' : undefined}
-              href={xnoCreatorStoreUrl || undefined}
-              target={xnoCreatorStoreUrl ? '_blank' : undefined}
-              rel={xnoCreatorStoreUrl ? 'noreferrer' : undefined}
-              aria-disabled={!xnoCreatorStoreUrl}
-              onClick={(event) => {
-                if (!xnoCreatorStoreUrl) event.preventDefault()
-              }}
-            >
-              Comprar XNO al creador (solo Colombia)
-            </a>
-            <a href="https://hub.nano.org/trading" target="_blank" rel="noreferrer">
-              Comprar o vender XNO con proveedores globales
-            </a>
-          </div>
-        </div>
+        <p>Identifica este perfil con la persona que compartió el enlace.</p>
       </section>
 
       <section className="usage-policy buyer-policy">
-        <strong>Antes de desbloquear</strong>
-        <ul>
-          <li>Cada compra desbloquea únicamente la tarjeta seleccionada.</li>
-          <li>
-            Si el titular actualiza su redacción, verás la versión más reciente
-            disponible. No se conserva historial de versiones anteriores.
-          </li>
-          <li>Las demás tarjetas continúan protegidas hasta que decidas desbloquearlas.</li>
-          <li>Revelox está en fase experimental.</li>
-        </ul>
-
-        {!isLoggedIn && !loginIntent && (
-          <div className="buyer-login-panel">
-            <p>
-              Para comprar o ver tarjetas desbloqueadas, inicia sesión con Nano.
-              Tus compras quedarán asociadas a tu dirección Nano.
-            </p>
-            <button
-              className="primary-action"
-              type="button"
-              onClick={requestLogin}
-              disabled={authState.loading}
-            >
-              {authState.loading ? (
-                <LoaderCircle className="spin" size={18} />
-              ) : (
-                <Wallet size={18} />
-              )}
-              Pagar {LOGIN_AMOUNT} XNO para iniciar sesión
-            </button>
-          </div>
-        )}
-
-        {!isLoggedIn && loginIntent && (
-          <div className="waiting-payment-panel">
-            <div className="waiting-payment" role="status" aria-live="polite">
-              <LoaderCircle className="spin" size={22} />
-              <div>
-                <strong>Esperando confirmar el login</strong>
-                <span>Puede tardar unos segundos.</span>
-              </div>
-            </div>
-            <button
-              className="secondary-action"
-              type="button"
-              onClick={retryLoginPayment}
-            >
-              Intentar pago de nuevo
-            </button>
-          </div>
-        )}
-
-        {!isLoggedIn && authState.error && (
-          <p className="form-error">{authState.error}</p>
-        )}
-
-        {isLoggedIn && (
-          <p className="buyer-session-note">
-            {isOwnerViewing
-              ? 'Estás viendo tu propio perfil. Puedes revisar tus redacciones publicadas, pero esta información permanece oculta para cualquier usuario que no haya pagado por cada tarjeta.'
-              : 'Sesión Nano activa. Las tarjetas que desbloquees se asociarán a esta wallet.'}
-          </p>
-        )}
+        <p>
+          La revelación aparece solo en esta visita. Si cierras o recargas,
+          desaparece.
+        </p>
       </section>
 
       <section className="public-profile-grid">
@@ -960,7 +625,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
           </div>
         )}
         {profile.answers.map((item, index) => {
-          const unlockedAnswer = unlockedAnswers[getAnswerAccessKey(item)]
+          const revealedAnswer = revealedAnswers[getAnswerAccessKey(item)]
           const isPending = pendingAnswerId === item.id
 
           return (
@@ -970,16 +635,16 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
               </div>
               <QuestionText index={index} text={item.prompt} titleAs="h2" />
 
-              <div className={unlockedAnswer ? 'hidden-answer revealed' : 'hidden-answer'}>
-                {unlockedAnswer ? <Eye size={22} /> : <EyeOff size={22} />}
-                <p>{unlockedAnswer || 'Respuesta oculta'}</p>
+              <div className={revealedAnswer ? 'hidden-answer revealed' : 'hidden-answer'}>
+                {revealedAnswer ? <Eye size={22} /> : <EyeOff size={22} />}
+                <p>{revealedAnswer || 'Oculta'}</p>
               </div>
 
-              {unlockedAnswer && (
+              {revealedAnswer && (
                 <button
                   className="secondary-action"
                   type="button"
-                  onClick={() => copyUnlockedAnswer(item.id, unlockedAnswer)}
+                  onClick={() => copyRevealedAnswer(item.id, revealedAnswer)}
                 >
                   {copiedAnswerId === item.id ? (
                     <Check size={18} />
@@ -992,40 +657,34 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
                 </button>
               )}
 
-              {!unlockedAnswer && !isPending && (
+              {!revealedAnswer && !isPending && (
                 <>
                   <p className="purchase-note">
-                    {isLoggedIn
-                      ? 'El pago desbloquea esta tarjeta. Si el titular actualiza su redacción, verás la versión más reciente disponible.'
-                      : 'Inicia sesión con Nano antes de desbloquear. Así la compra quedará asociada a tu dirección Nano.'}
+                    Revelación momentánea. Cópiala si quieres conservarla.
                   </p>
                   <button
                     className="primary-action"
                     type="button"
-                    disabled={requestState.loading || authState.loading}
-                    onClick={() =>
-                      isLoggedIn ? beginUnlock(item.id) : requestLogin()
-                    }
+                    disabled={requestState.loading}
+                    onClick={() => beginUnlock(item.id)}
                   >
-                    {requestState.loading || authState.loading ? (
+                    {requestState.loading ? (
                       <LoaderCircle className="spin" size={18} />
                     ) : (
                       <Wallet size={18} />
                     )}
-                    {isLoggedIn
-                      ? `Revelar por ${item.price} XNO`
-                      : `Pagar ${LOGIN_AMOUNT} XNO para iniciar sesión`}
+                    Revelar por {item.price} XNO
                   </button>
                 </>
               )}
 
-              {!unlockedAnswer && isPending && (
+              {!revealedAnswer && isPending && (
                 <div className="waiting-payment-panel">
                   <div className="waiting-payment" role="status" aria-live="polite">
                     <LoaderCircle className="spin" size={22} />
                     <div>
-                      <strong>Esperando revelar la respuesta</strong>
-                      <span>Estamos validando tu pago.</span>
+                      <strong>Validando pago</strong>
+                      <span>Validando pago.</span>
                     </div>
                   </div>
                   <button
@@ -1038,7 +697,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
                 </div>
               )}
 
-              {!unlockedAnswer && requestState.error && !isPending && (
+              {!revealedAnswer && requestState.error && !isPending && (
                 <p className="form-error">{requestState.error}</p>
               )}
             </article>

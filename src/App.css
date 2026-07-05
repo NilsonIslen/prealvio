@@ -98,12 +98,6 @@
   box-shadow: 0 16px 34px rgba(216, 67, 100, 0.3);
 }
 
-.public-topbar-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-}
-
 button,
 input,
 textarea {
@@ -446,12 +440,19 @@ h2 {
 
 .usage-policy {
   display: grid;
-  gap: 10px;
-  padding: clamp(16px, 2.4vw, 22px);
+  gap: 8px;
+  padding: clamp(12px, 2vw, 16px);
   border: 1px solid rgba(32, 43, 48, 0.12);
   border-radius: 10px;
   color: #385257;
   background: rgba(255, 255, 255, 0.72);
+}
+
+.usage-policy p {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 750;
+  line-height: 1.45;
 }
 
 .usage-policy strong {
@@ -474,27 +475,9 @@ h2 {
 }
 
 .buyer-policy {
-  max-width: 980px;
+  max-width: 640px;
   margin: 0 auto;
-}
-
-.buyer-login-panel,
-.buyer-session-note {
-  display: grid;
-  gap: 10px;
-  padding: 14px;
-  border: 1px solid rgba(216, 67, 100, 0.2);
-  border-radius: 9px;
-  background: #fff7f8;
-}
-
-.buyer-login-panel p,
-.buyer-session-note {
-  margin: 0;
-  color: #7b4a54;
-  font-size: 0.92rem;
-  font-weight: 780;
-  line-height: 1.5;
+  text-align: center;
 }
 
 .question-card {
@@ -837,7 +820,7 @@ h2 {
 .profile-hero {
   display: grid;
   justify-items: center;
-  padding: clamp(36px, 6vw, 64px) 20px 28px;
+  padding: clamp(26px, 5vw, 46px) 20px 18px;
   text-align: center;
 }
 
@@ -868,11 +851,11 @@ h2 {
 
 .profile-avatar {
   display: flex;
-  width: 112px;
-  height: 112px;
+  width: 88px;
+  height: 88px;
   align-items: flex-end;
   justify-content: center;
-  margin-bottom: 24px;
+  margin-bottom: 10px;
   overflow: hidden;
   border: 5px solid rgba(255, 255, 255, 0.9);
   border-radius: 28px;
@@ -881,7 +864,7 @@ h2 {
 }
 
 .profile-avatar img {
-  width: 108px;
+  width: 84px;
   transform: translateY(8px);
 }
 
@@ -977,10 +960,11 @@ h2 {
 
 .purchase-note {
   margin: 0;
-  color: #7b4a54;
-  font-size: 0.84rem;
-  font-weight: 750;
-  line-height: 1.45;
+  color: #8a6a70;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
+  text-align: center;
 }
 
 .page-message {

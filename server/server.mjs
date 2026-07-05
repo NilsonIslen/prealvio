@@ -1,5 +1,5 @@
 import { createServer } from 'node:http'
-import { createHash, timingSafeEqual } from 'node:crypto'
+import { createHash } from 'node:crypto'
 import { findIncomingPayment } from './nano-rpc.mjs'
 import { getQuestion, questions } from './questions.mjs'
 import { createId, createToken, mutateStore, readStore } from './store.mjs'
@@ -146,21 +146,6 @@ const normalizeNanoAmount = (value) => {
 
 const getProfileId = (ownerAddress) =>
   createHash('sha256').update(ownerAddress).digest('hex').slice(0, 32)
-
-const hashUnlockToken = (token) =>
-  createHash('sha256').update(token).digest()
-
-const hasUnlockAccess = (intent, token) => {
-  if (!intent?.unlockTokenHash || !token) return false
-
-  const storedHash = Buffer.from(intent.unlockTokenHash, 'hex')
-  const providedHash = hashUnlockToken(token)
-
-  return (
-    storedHash.length === providedHash.length &&
-    timingSafeEqual(storedHash, providedHash)
-  )
-}
 
 const getQuestionKey = (question) => question?.key ?? question?.prompt
 
@@ -391,8 +376,6 @@ const createPaymentIntent = async ({
   baseAmount,
   profileId,
   answerId,
-  payerAddress,
-  unlockTokenHash,
 }) =>
   mutateStore((store) => {
     const now = Date.now()
@@ -408,8 +391,6 @@ const createPaymentIntent = async ({
       amountNano: createUniqueAmount(baseAmount, store.paymentIntents),
       profileId,
       answerId,
-      payerAddress,
-      unlockTokenHash,
       status: 'pending',
       createdAt: new Date(now).toISOString(),
       expiresAt: new Date(now + paymentIntentTtlMs).toISOString(),
@@ -570,7 +551,20 @@ const server = createServer(async (request, response) => {
         return
       }
 
-      const { intent, payment } = await verifyPaymentIntent(intentId, 'login')
+      const competingLoginIntents = currentStore.paymentIntents.filter(
+        (item) =>
+          item.id !== intentId &&
+          item.purpose === 'login' &&
+          item.status === 'pending' &&
+          new Date(item.expiresAt).getTime() > Date.now(),
+      )
+      const fallbackAmountNano =
+        competingLoginIntents.length === 0 ? loginAmountNano : undefined
+      const { intent, payment } = await verifyPaymentIntent(
+        intentId,
+        'login',
+        fallbackAmountNano,
+      )
       const token = createToken()
 
       await mutateStore((store) => {
@@ -805,7 +799,6 @@ const server = createServer(async (request, response) => {
 
   if (request.method === 'POST' && unlockStartMatch) {
     const store = await readStore()
-    const session = getSession(request, store)
     const profile = store.profiles.find((item) => item.id === unlockStartMatch[1])
     const question = getQuestion(Number(unlockStartMatch[2]))
     const answer = profile?.answers.find(
@@ -814,78 +807,20 @@ const server = createServer(async (request, response) => {
         isCurrentAnswer(question, item),
     )
 
-    if (!session) {
-      sendJson(response, 401, {
-        error: 'Inicia sesión con Nano para desbloquear tarjetas',
-      })
-      return
-    }
-
     if (!profile || !answer) {
       sendJson(response, 404, { error: 'Respuesta no encontrada' })
       return
     }
 
-    if (profile.ownerAddress === session.ownerAddress) {
-      sendJson(response, 200, {
-        alreadyUnlocked: true,
-        ownerPreview: true,
-        answer: answer.answer,
-      })
-      return
-    }
-
-    const existingAccess = store.usedPayments.some(
-      (item) =>
-        item.purpose === 'unlock' &&
-        item.profileId === profile.id &&
-        item.answerId === answer.id &&
-        item.payerAddress === session.ownerAddress,
-    )
-
-    if (existingAccess) {
-      sendJson(response, 200, {
-        alreadyUnlocked: true,
-        answer: answer.answer,
-      })
-      return
-    }
-
-    const reusableIntent = store.paymentIntents
-      .filter(
-        (item) =>
-          item.purpose === 'unlock' &&
-          item.status === 'pending' &&
-          item.profileId === profile.id &&
-          item.answerId === answer.id &&
-          item.payerAddress === session.ownerAddress &&
-          new Date(item.expiresAt).getTime() > Date.now(),
-      )
-      .sort((left, right) => new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime())[0]
-
-    if (reusableIntent) {
-      sendJson(response, 200, {
-        intentId: reusableIntent.id,
-        receiverAddress: reusableIntent.receiverAddress,
-        amountNano: reusableIntent.amountNano,
-        expiresAt: reusableIntent.expiresAt,
-      })
-      return
-    }
-
-    const unlockToken = createToken()
     const intent = await createPaymentIntent({
       purpose: 'unlock',
       receiverAddress: profile.ownerAddress,
       baseAmount: answer.price,
       profileId: profile.id,
       answerId: answer.id,
-      payerAddress: session.ownerAddress,
-      unlockTokenHash: hashUnlockToken(unlockToken).toString('hex'),
     })
     sendJson(response, 201, {
       intentId: intent.id,
-      unlockToken,
       receiverAddress: intent.receiverAddress,
       amountNano: intent.amountNano,
       expiresAt: intent.expiresAt,
@@ -897,9 +832,7 @@ const server = createServer(async (request, response) => {
     try {
       const body = await readBody(request)
       const intentId = String(body.intentId ?? '').trim()
-      const unlockToken = String(body.unlockToken ?? '').trim()
       const store = await readStore()
-      const session = getSession(request, store)
       const profile = store.profiles.find((item) => item.id === unlockMatch[1])
       const question = getQuestion(Number(unlockMatch[2]))
       const answer = profile?.answers.find(
@@ -908,133 +841,52 @@ const server = createServer(async (request, response) => {
         isCurrentAnswer(question, item),
       )
 
-      if (!session) {
-        sendJson(response, 401, {
-          error: 'Inicia sesión con Nano para ver tarjetas desbloqueadas',
-        })
-        return
-      }
-
       if (!profile || !answer) {
         sendJson(response, 404, { error: 'Respuesta no encontrada' })
         return
       }
 
-      if (profile.ownerAddress === session.ownerAddress) {
-        sendJson(response, 200, {
-          answer: answer.answer,
-          ownerPreview: true,
-        })
-        return
-      }
-
-      const existingAccess = store.usedPayments.some(
-        (item) =>
-          item.purpose === 'unlock' &&
-          item.profileId === profile.id &&
-          item.answerId === answer.id &&
-          item.payerAddress === session.ownerAddress,
-      )
-
-      if (!intentId && existingAccess) {
-        sendJson(response, 200, {
-          answer: answer.answer,
-          payerAddress: session.ownerAddress,
-        })
-        return
-      }
-
-      const recoverablePendingIntent = !intentId
-        ? store.paymentIntents
-            .filter(
-              (item) =>
-                item.purpose === 'unlock' &&
-                item.status === 'pending' &&
-                item.profileId === profile.id &&
-                item.answerId === answer.id &&
-                item.payerAddress === session.ownerAddress &&
-                new Date(item.expiresAt).getTime() > Date.now(),
-            )
-            .sort(
-              (left, right) =>
-                new Date(right.createdAt).getTime() - new Date(left.createdAt).getTime(),
-            )[0]
-        : null
-      const effectiveIntentId = intentId || recoverablePendingIntent?.id || ''
-
       const completedIntent = store.paymentIntents.find(
         (item) =>
-          item.id === effectiveIntentId &&
+          item.id === intentId &&
           item.purpose === 'unlock' &&
           item.status === 'completed' &&
           item.profileId === profile.id &&
           item.answerId === answer.id &&
-          item.payerAddress === session.ownerAddress,
+          item.answerQuestionKey === getQuestionKey(question) &&
+          new Date(item.expiresAt).getTime() > Date.now(),
       )
 
-      if (completedIntent && !hasUnlockAccess(completedIntent, unlockToken)) {
-        sendJson(response, 403, {
-          error: 'Este acceso pertenece exclusivamente a quien realizó el pago',
-        })
-        return
-      }
-
-      if (
-        completedIntent?.paymentHash &&
-        completedIntent.answerQuestionKey === getQuestionKey(question)
-      ) {
+      if (completedIntent?.paymentHash) {
         sendJson(response, 200, {
           answer: answer.answer,
           paymentHash: completedIntent.paymentHash,
-          payerAddress: completedIntent.payerAddress,
         })
         return
       }
 
       const pendingIntent = store.paymentIntents.find(
         (item) =>
-          item.id === effectiveIntentId &&
-          item.purpose === 'unlock' &&
-          item.status === 'pending' &&
-          item.payerAddress === session.ownerAddress,
-      )
-
-      if (
-        !hasUnlockAccess(pendingIntent, unlockToken) &&
-        pendingIntent?.payerAddress !== session.ownerAddress
-      ) {
-        sendJson(response, 403, {
-          error: 'Este acceso pertenece exclusivamente a quien inició el pago',
-        })
-        return
-      }
-
-      const competingIntents = store.paymentIntents.filter(
-        (item) =>
-          item.id !== intentId &&
+          item.id === intentId &&
           item.purpose === 'unlock' &&
           item.status === 'pending' &&
           item.profileId === profile.id &&
-          item.answerId === answer.id &&
-          new Date(item.expiresAt).getTime() > Date.now(),
+          item.answerId === answer.id,
       )
-      const fallbackAmountNano =
-        competingIntents.length === 0 ? answer.price : undefined
+
+      if (!pendingIntent) {
+        sendJson(response, 403, { error: 'Solicitud de pago inválida o utilizada' })
+        return
+      }
+
       const { intent, payment } = await verifyPaymentIntent(
-        effectiveIntentId,
+        intentId,
         'unlock',
-        fallbackAmountNano,
+        answer.price,
       )
 
       if (intent.profileId !== profile.id || intent.answerId !== answer.id) {
         sendJson(response, 400, { error: 'El pago no corresponde a esta respuesta' })
-        return
-      }
-
-      if (payment.senderWallet !== session.ownerAddress) {
-        sendJson(response, 403, {
-          error: 'El pago debe realizarse desde la misma wallet Nano con la que iniciaste sesión',
-        })
         return
       }
 
@@ -1048,7 +900,6 @@ const server = createServer(async (request, response) => {
           purpose: 'unlock',
           profileId: profile.id,
           answerId: answer.id,
-          payerAddress: payment.senderWallet,
           createdAt: new Date().toISOString(),
         })
         const currentIntent = current.paymentIntents.find(
@@ -1057,8 +908,6 @@ const server = createServer(async (request, response) => {
         if (currentIntent) {
           currentIntent.status = 'completed'
           currentIntent.paymentHash = payment.hash
-          currentIntent.payerAddress = payment.senderWallet
-          currentIntent.answerSnapshot = answer.answer
           currentIntent.answerQuestionKey = getQuestionKey(question)
         }
       })
@@ -1066,7 +915,6 @@ const server = createServer(async (request, response) => {
       sendJson(response, 200, {
         answer: answer.answer,
         paymentHash: payment.hash,
-        payerAddress: payment.senderWallet,
       })
     } catch (error) {
       sendJson(response, 422, {
