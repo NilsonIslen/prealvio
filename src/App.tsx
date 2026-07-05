@@ -440,6 +440,22 @@ function QuestionText({
   )
 }
 
+function WritingExample({ prompt }: { prompt: string }) {
+  const normalizedPrompt = prompt.toLocaleLowerCase('es-CO')
+
+  return (
+    <div className="writing-example">
+      <span>Ejemplo de redacción</span>
+      <p>
+        Sobre {normalizedPrompt}, contaría una escena concreta, cómo me hizo
+        sentir, qué aprendí de eso y qué revela de mí hoy. También diría qué
+        cambió con el tiempo y qué quisiera que otra persona entendiera antes
+        de acercarse a mí.
+      </p>
+    </div>
+  )
+}
+
 function Brand() {
   return (
     <div className="brand">
@@ -1322,6 +1338,7 @@ function CreatorPage() {
                 )}
 
                 <QuestionText index={index} text={question.prompt} />
+                <WritingExample prompt={question.prompt} />
 
                 {question.fields?.length ? (
                   <div className="structured-fields">
