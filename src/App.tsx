@@ -487,8 +487,8 @@ function GuidePage() {
             <ArrowLeft size={18} />
             Volver
           </a>
-          <a className="header-link" href="/">
-            <UserRound size={18} />
+          <a className="subtle-header-link" href="/">
+            <UserRound size={16} />
             Crear mi perfil
           </a>
         </div>
@@ -736,8 +736,8 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
             <BookOpen size={18} />
             Guía
           </a>
-          <a className="header-link" href={window.location.pathname}>
-            <UserRound size={18} />
+          <a className="subtle-header-link" href={window.location.pathname}>
+            <UserRound size={16} />
             Crear mi perfil
           </a>
         </div>

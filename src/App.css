@@ -107,6 +107,24 @@
   box-shadow: none;
 }
 
+.subtle-header-link {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  color: #7b4a54;
+  font-size: 0.86rem;
+  font-weight: 850;
+  text-decoration: none;
+}
+
+.subtle-header-link:hover {
+  color: #7b2438;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
 .header-link:hover {
   transform: translateY(-1px);
   box-shadow: 0 16px 34px rgba(216, 67, 100, 0.3);
@@ -1148,6 +1166,10 @@ h2 {
   }
 
   .header-link {
+    width: 100%;
+  }
+
+  .subtle-header-link {
     width: 100%;
   }
 
