@@ -88,3 +88,22 @@ No pretende medir popularidad.
 No pretende recopilar datos.
 
 Pretende ayudar a las personas a conocerse mejor antes de decidir construir relaciones importantes.
+
+---
+
+# Despliegue en VPS
+
+Desde el servidor:
+
+```bash
+cd /root/revelox
+npm run deploy:vps
+```
+
+El script descarga la última versión de GitHub, instala dependencias, compila la web, publica `dist` en Nginx y reinicia la API.
+
+Variables opcionales:
+
+```bash
+APP_DIR=/root/revelox WEB_DIR=/var/www/revelox BRANCH=main SERVICE_NAME=revelox-api npm run deploy:vps
+```

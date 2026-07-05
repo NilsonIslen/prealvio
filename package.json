@@ -10,6 +10,7 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "deploy:vps": "bash scripts/deploy-vps.sh",
     "start:api": "node --env-file=.env.local server/server.mjs"
   },
   "dependencies": {
