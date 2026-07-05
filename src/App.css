@@ -609,29 +609,6 @@ h2 {
   overflow-wrap: anywhere;
 }
 
-.creator-donation {
-  display: grid;
-  gap: 8px;
-  padding: 12px;
-  border: 1px solid rgba(32, 43, 48, 0.1);
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.75);
-}
-
-.creator-donation strong {
-  color: var(--heading);
-  font-size: 0.95rem;
-  font-weight: 900;
-}
-
-.creator-donation p {
-  margin: 0;
-  color: #385257;
-  font-size: 0.85rem;
-  font-weight: 720;
-  line-height: 1.45;
-}
-
 .locked-badge {
   display: inline-flex;
   align-items: center;
@@ -947,6 +924,11 @@ h2 {
   display: grid;
   gap: 8px;
   padding-left: 20px;
+}
+
+.guide-donation-action {
+  width: fit-content;
+  margin-top: 4px;
 }
 
 .public-shell {

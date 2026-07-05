@@ -544,6 +544,24 @@ function GuidePage() {
           </p>
         </article>
 
+        <article className="guide-section guide-donation">
+          <h2>Apoyo voluntario a Revelox</h2>
+          <p>
+            Quien publica recibe el 100% del precio definido para sus
+            revelaciones. Si Revelox te resulta útil y quieres apoyar su
+            mantenimiento, desarrollo y mejora continua, puedes enviar una
+            donación voluntaria al equipo.
+          </p>
+          <button
+            className="secondary-action guide-donation-action"
+            type="button"
+            onClick={() => openNanoDonation(DEVELOPMENT_WALLET)}
+          >
+            <Wallet size={18} />
+            Donar al equipo
+          </button>
+        </article>
+
         <article className="guide-section">
           <h2>Términos básicos</h2>
           <ul>
@@ -1243,22 +1261,6 @@ function CreatorPage() {
                 {copied ? <Check size={18} /> : <Copy size={18} />}
                 {copied ? 'Enlace copiado' : 'Copiar enlace'}
               </button>
-              <div className="creator-donation">
-                <strong>Apoya Revelox</strong>
-                <p>
-                  Tú recibes el 100% de lo que pagan por tu contenido. Si
-                  Revelox te ha sido útil y has recibido ingresos, puedes apoyar
-                  al equipo de desarrollo con una donación voluntaria.
-                </p>
-                <button
-                  className="secondary-action"
-                  type="button"
-                  onClick={() => openNanoDonation(DEVELOPMENT_WALLET)}
-                >
-                  <Wallet size={18} />
-                  Donar al equipo
-                </button>
-              </div>
             </div>
           ) : (
             <div className="wallet-help">
