@@ -153,7 +153,7 @@ const countWords = (value) => String(value ?? '').trim().split(/\s+/).filter(Boo
 
 const countCharacters = (value) => String(value ?? '').trim().length
 
-const getStoredFieldValue = (answerText, field) => {
+const getStoredFieldValue = (answerText, field, fields = []) => {
   const prefix = `${field.label}:`
   const startIndex = answerText.startsWith(prefix)
     ? 0
@@ -162,7 +162,11 @@ const getStoredFieldValue = (answerText, field) => {
   if (startIndex < 0) return ''
 
   const valueStartIndex = startIndex + (startIndex === 0 ? prefix.length : prefix.length + 1)
-  const nextFieldIndex = answerText.indexOf('\n', valueStartIndex)
+  const nextFieldIndex = fields
+    .filter((item) => item.label !== field.label)
+    .map((item) => answerText.indexOf(`\n${item.label}:`, valueStartIndex))
+    .filter((index) => index >= 0)
+    .sort((left, right) => left - right)[0]
 
   return answerText
     .slice(valueStartIndex, nextFieldIndex >= 0 ? nextFieldIndex : undefined)
@@ -177,7 +181,7 @@ const isCurrentAnswer = (question, item) => {
   const answerText = String(item?.answer ?? '')
 
   return question.fields.some((field) => {
-    const value = getStoredFieldValue(answerText, field)
+    const value = getStoredFieldValue(answerText, field, question.fields)
     if (!value) return false
     if (question.minWords && countWords(value) < question.minWords) return false
     if (question.maxWords && countWords(value) > question.maxWords) return false
