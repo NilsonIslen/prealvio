@@ -332,6 +332,8 @@ const hasQuestionContent = (question: Question) =>
       })
     : Boolean(question.answer.trim())
 
+const getSessionIdentifier = (address: string) => address.slice(-8)
+
 const xnoToRaw = (value: string) => {
   const [whole = '0', fraction = ''] = value.trim().split('.')
   const normalizedFraction = fraction.slice(0, 30).padEnd(30, '0')
@@ -523,6 +525,21 @@ function GuidePage() {
         </article>
 
         <article className="guide-section">
+          <h2>Sobre Revelox</h2>
+          <p>
+            Revelox ayuda a conocer mejor a una persona antes de construir un
+            vínculo importante. Cada perfil se forma con tarjetas sobre partes
+            de su identidad, y cada tarjeta contiene una redacción escrita por
+            su titular.
+          </p>
+          <p>
+            La intención no es responder preguntas aisladas, sino construir una
+            imagen más completa, consciente y transparente de quién es esa
+            persona.
+          </p>
+        </article>
+
+        <article className="guide-section">
           <h2>Cómo responder</h2>
           <p>
             Cada tarjeta contiene un tema predefinido por Revelox. Elige las
@@ -567,6 +584,7 @@ function GuidePage() {
           <ul>
             <li>Al usar Revelox aceptas estas indicaciones, políticas y términos.</li>
             <li>Eres responsable por el contenido que publicas y por cómo usas lo revelado.</li>
+            <li>El identificador de sesión muestra los últimos 8 caracteres de tu wallet Nano para que reconozcas tu sesión sin exponer la dirección completa.</li>
             <li>El acceso, los pagos y las sesiones pueden depender del navegador y del estado de la red.</li>
             <li>La app puede cambiar mientras siga en desarrollo experimental.</li>
           </ul>
@@ -888,6 +906,7 @@ function CreatorPage() {
   const [copied, setCopied] = useState(false)
 
   const isLoggedIn = Boolean(authToken)
+  const sessionIdentifier = getSessionIdentifier(ownerAddress)
   const shareUrl = profileId
     ? `${window.location.origin}${window.location.pathname}?profile=${profileId}`
     : ''
@@ -1189,7 +1208,11 @@ function CreatorPage() {
           <div className="login-heading">
             <UserRound size={22} />
             <div>
-              <h2>{isLoggedIn ? 'Sesión activa' : 'Login Nano'}</h2>
+              <h2>
+                {isLoggedIn && sessionIdentifier
+                  ? `Sesión activa · ${sessionIdentifier}`
+                  : 'Login Nano'}
+              </h2>
             </div>
           </div>
 
@@ -1241,10 +1264,6 @@ function CreatorPage() {
 
           {isLoggedIn ? (
             <div className="active-session-details">
-              <div className="session-detail">
-                <span>Dirección Nano</span>
-                <strong>{ownerAddress}</strong>
-              </div>
               <div className="session-detail">
                 <span>Enlace</span>
                 <p>
