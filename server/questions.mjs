@@ -365,9 +365,15 @@ const writingExamples = {
   'Mis ídolos': `Ejemplo: Mis ídolos muestran lo que admiro y lo que quisiera desarrollar en mí. No los veo perfectos; me interesan por su talento, valentía, disciplina o forma de sostener una visión.`,
 }
 
-const getWritingExample = (prompt) =>
-  writingExamples[prompt] ??
-  `Ejemplo: Escribiría una experiencia concreta relacionada con ${prompt.toLocaleLowerCase('es-CO')}, explicando qué pasó, cómo me marcó y qué revela de mí hoy.`
+const getWritingExample = (prompt) => {
+  const example =
+    writingExamples[prompt] ??
+    `Ejemplo: Escribiría una experiencia concreta relacionada con ${prompt.toLocaleLowerCase('es-CO')}, explicando qué pasó, cómo me marcó y qué revela de mí hoy.`
+
+  return example.endsWith('...')
+    ? example
+    : `${example.replace(/\.+$/, '')}...`
+}
 
 const createQuestion = (prompt, index) => ({
   id: index + 1,
