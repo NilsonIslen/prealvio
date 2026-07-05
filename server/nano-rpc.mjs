@@ -155,17 +155,17 @@ export async function findIncomingPayment({
 
     return timestamp * 1000 >= minimumTimestampMs
   }
-  const getReceivableMatch = (entries) =>
+  const getReceivableMatches = (entries) =>
     acceptedRawAmounts.flatMap(({ amountNano: matchedAmountNano, raw }) => {
-      const match = entries.find(
+      const matches = entries.filter(
         ([hash, entry]) =>
           entry?.amount === raw &&
           entry?.source &&
           isNanoHash(hash) &&
           !excluded.has(normalizeNanoHash(hash)),
       )
-      return match ? [{ match, matchedAmountNano }] : []
-    })[0]
+      return matches.map((match) => ({ match, matchedAmountNano }))
+    })
   const receivable = await nanoRpc(
     {
       action: 'receivable',
@@ -176,15 +176,17 @@ export async function findIncomingPayment({
     },
     {
       shouldRetryWithFallback: (data) =>
-        !getReceivableMatch(getReceivableEntries(data)),
+        getReceivableMatches(getReceivableEntries(data)).length === 0,
     },
   )
-  const pendingPayment = getReceivableMatch(getReceivableEntries(receivable))
+  const pendingPayments = getReceivableMatches(getReceivableEntries(receivable))
 
-  if (pendingPayment) {
+  for (const pendingPayment of pendingPayments) {
     const [hash, entry] = pendingPayment.match
     const normalizedHash = normalizeNanoHash(hash)
     const block = await getNanoBlockInfo(normalizedHash)
+    if (!isRecentEnough(block)) continue
+
     const issue = getPaymentIssue(block, {
       senderWallet: entry.source,
       receiverWallet,
@@ -192,9 +194,6 @@ export async function findIncomingPayment({
     })
 
     if (issue) throw new Error(issue)
-    if (!isRecentEnough(block)) {
-      throw new Error('El pago encontrado fue realizado antes de iniciar esta compra.')
-    }
 
     return {
       hash: normalizedHash,
