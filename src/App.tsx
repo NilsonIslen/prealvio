@@ -772,10 +772,6 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
       <header className="topbar">
         <Brand />
         <div className="topbar-actions">
-          <a className="header-link muted" href={getGuideHref()}>
-            <BookOpen size={18} />
-            Guía
-          </a>
           <a className="subtle-header-link" href={window.location.pathname}>
             <UserRound size={16} />
             Crear mi perfil
@@ -1189,10 +1185,6 @@ function CreatorPage() {
       <header className="topbar">
         <Brand />
         <div className="topbar-actions">
-          <a className="header-link muted" href={getGuideHref()}>
-            <BookOpen size={18} />
-            Guía
-          </a>
           {isLoggedIn ? (
             <button className="session-pill verified" type="button" onClick={logout}>
               <LogOut size={16} />
