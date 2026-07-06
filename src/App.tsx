@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import {
   BookOpen,
   Check,
+  ChevronDown,
   Copy,
   Eye,
   EyeOff,
@@ -472,8 +473,10 @@ function Brand() {
 const getCurrentPagePath = () =>
   `${window.location.pathname}${window.location.search}${window.location.hash}`
 
-const getGuideHref = () =>
-  `/guia?volver=${encodeURIComponent(getCurrentPagePath())}`
+const getGuideHref = (section?: string) =>
+  `/guia?volver=${encodeURIComponent(getCurrentPagePath())}${
+    section ? `#${section}` : ''
+  }`
 
 const getGuideReturnPath = () => {
   const fallbackPath = '/'
@@ -486,13 +489,110 @@ const getGuideReturnPath = () => {
   return returnPath
 }
 
-function GuideLink() {
+function TopMenu() {
   return (
-    <a className="guide-consent-link" href={getGuideHref()}>
-      <BookOpen size={18} />
-      Al usar Revelox aceptas su guía, políticas y términos.
-    </a>
+    <details className="top-menu">
+      <summary className="top-menu-trigger">
+        <UserRound size={16} />
+        Menú
+        <ChevronDown size={15} />
+      </summary>
+      <nav className="top-menu-panel" aria-label="Opciones de Revelox">
+        <a href="/">Crear mi perfil</a>
+        <a
+          className={!xnoCreatorStoreUrl ? 'unavailable' : undefined}
+          href={xnoCreatorStoreUrl || undefined}
+          target={xnoCreatorStoreUrl ? '_blank' : undefined}
+          rel={xnoCreatorStoreUrl ? 'noreferrer' : undefined}
+          aria-disabled={!xnoCreatorStoreUrl}
+          onClick={(event) => {
+            if (!xnoCreatorStoreUrl) event.preventDefault()
+          }}
+        >
+          Comprar XNO al creador (Colombia)
+        </a>
+        <a href="https://hub.nano.org/trading" target="_blank" rel="noreferrer">
+          Comprar XNO a un proveedor global
+        </a>
+        <a href={getGuideHref()}>Guía</a>
+        <a href={getGuideHref('soporte')}>Soporte</a>
+      </nav>
+    </details>
   )
+}
+
+function ConsentDialog({
+  open,
+  onAccept,
+  onCancel,
+}: {
+  open: boolean
+  onAccept: () => void
+  onCancel: () => void
+}) {
+  if (!open) return null
+
+  return (
+    <div className="consent-dialog-backdrop" role="presentation">
+      <div
+        aria-labelledby="consent-dialog-title"
+        aria-modal="true"
+        className="consent-dialog"
+        role="dialog"
+      >
+        <h2 id="consent-dialog-title">Antes de continuar</h2>
+        <p>
+          Para usar Revelox debes estar de acuerdo con su guía, políticas y
+          términos. Puedes revisarlos en la{' '}
+          <a href={getGuideHref()} target="_blank" rel="noreferrer">
+            guía de uso
+          </a>
+          .
+        </p>
+        <div className="consent-dialog-actions">
+          <button className="secondary-action" type="button" onClick={onCancel}>
+            Cancelar
+          </button>
+          <button className="primary-action" type="button" onClick={onAccept}>
+            Acepto
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function useConsentGate() {
+  const [consentOpen, setConsentOpen] = useState(false)
+  const pendingConsentActionRef = useRef<(() => void | Promise<void>) | null>(null)
+
+  const requestConsent = (action: () => void | Promise<void>) => {
+    pendingConsentActionRef.current = action
+    setConsentOpen(true)
+  }
+
+  const acceptConsent = () => {
+    const action = pendingConsentActionRef.current
+    pendingConsentActionRef.current = null
+    setConsentOpen(false)
+    void action?.()
+  }
+
+  const cancelConsent = () => {
+    pendingConsentActionRef.current = null
+    setConsentOpen(false)
+  }
+
+  return {
+    consentDialog: (
+      <ConsentDialog
+        open={consentOpen}
+        onAccept={acceptConsent}
+        onCancel={cancelConsent}
+      />
+    ),
+    requestConsent,
+  }
 }
 
 function GuidePage() {
@@ -507,10 +607,7 @@ function GuidePage() {
             <ArrowLeft size={18} />
             Volver
           </a>
-          <a className="subtle-header-link" href="/">
-            <UserRound size={16} />
-            Crear mi perfil
-          </a>
+          <TopMenu />
         </div>
       </header>
 
@@ -597,6 +694,16 @@ function GuidePage() {
           </p>
         </article>
 
+        <article className="guide-section" id="soporte">
+          <h2>Soporte</h2>
+          <p>
+            Si necesitas ayuda con pagos, sesión, redacciones o revelaciones,
+            revisa primero esta guía y conserva capturas del problema, hora
+            aproximada y enlace del perfil para poder revisar el caso con más
+            claridad.
+          </p>
+        </article>
+
         <article className="guide-section">
           <h2>Términos básicos</h2>
           <ul>
@@ -632,6 +739,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
     loading: false,
     error: '',
   })
+  const { consentDialog, requestConsent } = useConsentGate()
 
   useEffect(() => {
     let active = true
@@ -786,10 +894,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
       <header className="topbar public-profile-topbar">
         <Brand />
         <div className="topbar-actions">
-          <a className="subtle-header-link" href={window.location.pathname}>
-            <UserRound size={16} />
-            Crear mi perfil
-          </a>
+          <TopMenu />
         </div>
       </header>
 
@@ -798,10 +903,6 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
           <img src="/favicon.png" alt="" aria-hidden="true" />
         </div>
         <p>Identifica este perfil con la persona que compartió el enlace.</p>
-      </section>
-
-      <section className="consent-strip">
-        <GuideLink />
       </section>
 
       <section className="public-profile-grid">
@@ -853,7 +954,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
                     className="primary-action"
                     type="button"
                     disabled={requestState.loading}
-                    onClick={() => beginUnlock(item.id)}
+                    onClick={() => requestConsent(() => beginUnlock(item.id))}
                   >
                     {requestState.loading ? (
                       <LoaderCircle className="spin" size={18} />
@@ -891,6 +992,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
           )
         })}
       </section>
+      {consentDialog}
     </main>
   )
 }
@@ -919,6 +1021,7 @@ function CreatorPage() {
     () => localStorage.getItem('revelox-profile-id') ?? '',
   )
   const [copied, setCopied] = useState(false)
+  const { consentDialog, requestConsent } = useConsentGate()
 
   const isLoggedIn = Boolean(authToken)
   const sessionIdentifier = getSessionIdentifier(ownerAddress)
@@ -1196,6 +1299,7 @@ function CreatorPage() {
       <header className="topbar">
         <Brand />
         <div className="topbar-actions">
+          <TopMenu />
           {isLoggedIn ? (
             <button className="session-pill verified" type="button" onClick={logout}>
               <LogOut size={16} />
@@ -1233,7 +1337,7 @@ function CreatorPage() {
               <button
                 className="primary-action"
                 type="button"
-                onClick={requestLogin}
+                onClick={() => requestConsent(requestLogin)}
                 disabled={authState.loading}
               >
                 {authState.loading ? (
@@ -1316,8 +1420,6 @@ function CreatorPage() {
           aria-label="Formulario para crear perfil"
           onSubmit={(event) => event.preventDefault()}
         >
-          <GuideLink />
-
           <div className="form-stack">
             {questions.map((question, index) => (
               <article className="question-card" key={question.id}>
@@ -1504,7 +1606,7 @@ function CreatorPage() {
                         !hasQuestionContent(question) ||
                         !(Number.parseFloat(question.price) > 0)
                       }
-                      onClick={() => saveAnswer(question.id)}
+                      onClick={() => requestConsent(() => saveAnswer(question.id))}
                     >
                       {savingQuestionId === question.id && publishState.loading ? (
                         <LoaderCircle className="spin" size={18} />
@@ -1537,6 +1639,7 @@ function CreatorPage() {
           </div>
         </form>
       </section>
+      {consentDialog}
     </main>
   )
 }
