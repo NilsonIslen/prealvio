@@ -4,6 +4,7 @@ import { appendFile, mkdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { findIncomingPayment } from './nano-rpc.mjs'
+import { decryptAnswer, encryptAnswer } from './answer-crypto.mjs'
 import { getQuestion, questions } from './questions.mjs'
 import { createId, createToken, mutateStore, readStore } from './store.mjs'
 
@@ -207,7 +208,7 @@ const isCurrentAnswer = (question, item) => {
   if (item?.questionKey !== getQuestionKey(question)) return false
   if (!question.fields?.length) return true
 
-  const answerText = String(item?.answer ?? '')
+  const answerText = decryptAnswer(item?.answer)
 
   return question.fields.some((field) => {
     const value = getStoredFieldValue(answerText, field, question.fields)
@@ -249,7 +250,7 @@ const getPrivateProfile = (profile) => ({
           id: item.id,
           questionKey: getQuestionKey(question),
           prompt: question.prompt,
-          answer: item.answer,
+          answer: decryptAnswer(item.answer),
           price: item.price,
         }]
       : []
@@ -345,7 +346,7 @@ const getAnswersFromBody = (body) =>
           return {
             id: question?.id,
             questionKey: getQuestionKey(question),
-            answer: question ? normalizeQuestionAnswer(question, item) : '',
+            answer: question ? encryptAnswer(normalizeQuestionAnswer(question, item)) : '',
             price,
           }
         })
@@ -774,7 +775,7 @@ const server = createServer(async (request, response) => {
         answer = {
           id: questionId,
           questionKey: getQuestionKey(question),
-          answer: answerText,
+          answer: encryptAnswer(answerText),
           price,
         }
       }
@@ -929,7 +930,7 @@ const server = createServer(async (request, response) => {
 
       if (completedIntent?.paymentHash) {
         sendJson(response, 200, {
-          answer: answer.answer,
+          answer: decryptAnswer(answer.answer),
           paymentHash: completedIntent.paymentHash,
         })
         return
@@ -983,7 +984,7 @@ const server = createServer(async (request, response) => {
       })
 
       sendJson(response, 200, {
-        answer: answer.answer,
+        answer: decryptAnswer(answer.answer),
         paymentHash: payment.hash,
       })
     } catch (error) {

@@ -11,6 +11,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "deploy:vps": "bash scripts/deploy-vps.sh",
+    "encrypt:answers": "node --env-file=.env.local scripts/encrypt-existing-answers.mjs",
     "start:api": "node --env-file=.env.local server/server.mjs"
   },
   "dependencies": {

@@ -687,6 +687,21 @@ function GuidePage() {
         </article>
 
         <article className="guide-section">
+          <h2>Cifrado de redacciones</h2>
+          <p>
+            Las redacciones se guardan cifradas en el servidor. Esto significa
+            que no quedan legibles directamente en la base de datos ni en los
+            archivos internos de almacenamiento.
+          </p>
+          <p>
+            Revelox descifra una redacción solo cuando el titular abre su sesión
+            o cuando una persona completa el pago requerido para revelar esa
+            tarjeta. La protección depende de mantener segura la clave de
+            cifrado del servidor.
+          </p>
+        </article>
+
+        <article className="guide-section">
           <h2>Política de uso responsable</h2>
           <ul>
             <li>Revelox está en fase experimental.</li>
