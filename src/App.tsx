@@ -9,7 +9,6 @@ import {
   ArrowLeft,
   LoaderCircle,
   Lock,
-  LogOut,
   Trash2,
   UserRound,
   Wallet,
@@ -489,7 +488,7 @@ const getGuideReturnPath = () => {
   return returnPath
 }
 
-function TopMenu() {
+function TopMenu({ onLogout }: { onLogout?: () => void }) {
   return (
     <details className="top-menu">
       <summary className="top-menu-trigger">
@@ -516,6 +515,11 @@ function TopMenu() {
         </a>
         <a href={getGuideHref()}>Guía</a>
         <a href={getGuideHref('soporte')}>Soporte</a>
+        {onLogout && (
+          <button type="button" onClick={onLogout}>
+            Cerrar sesión
+          </button>
+        )}
       </nav>
     </details>
   )
@@ -1296,15 +1300,15 @@ function CreatorPage() {
 
   return (
     <main className="app-shell">
-      <header className="topbar">
+      <header className="topbar creator-topbar">
         <Brand />
         <div className="topbar-actions">
-          <TopMenu />
+          <TopMenu onLogout={isLoggedIn ? logout : undefined} />
           {isLoggedIn ? (
-            <button className="session-pill verified" type="button" onClick={logout}>
-              <LogOut size={16} />
-              Cerrar sesión
-            </button>
+            <span className="session-pill verified">
+              <UserRound size={16} />
+              Sesión activa
+            </span>
           ) : (
             <span className="session-pill">
               <Lock size={16} />

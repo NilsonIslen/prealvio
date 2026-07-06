@@ -9,7 +9,7 @@
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 40;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -168,19 +168,28 @@
   box-shadow: 0 22px 50px rgba(62, 43, 51, 0.18);
 }
 
-.top-menu-panel a {
+.top-menu-panel a,
+.top-menu-panel button {
   padding: 12px 14px;
+  border: 0;
   color: #38232a;
   font-size: 0.92rem;
   font-weight: 850;
+  line-height: 1.25;
+  text-align: left;
   text-decoration: none;
+  background: transparent;
 }
 
-.top-menu-panel a + a {
+.top-menu-panel a + a,
+.top-menu-panel a + button,
+.top-menu-panel button + a,
+.top-menu-panel button + button {
   border-top: 1px solid rgba(32, 43, 48, 0.08);
 }
 
-.top-menu-panel a:hover {
+.top-menu-panel a:hover,
+.top-menu-panel button:hover {
   color: #7b2438;
   background: #fff3f6;
 }
@@ -1255,12 +1264,14 @@ h2 {
     justify-content: center;
   }
 
+  .creator-topbar,
   .guide-topbar,
   .public-profile-topbar {
     align-items: center;
     flex-direction: row;
   }
 
+  .creator-topbar .topbar-actions,
   .guide-topbar .topbar-actions,
   .public-profile-topbar .topbar-actions {
     width: auto;
@@ -1268,6 +1279,7 @@ h2 {
     align-items: center;
   }
 
+  .creator-topbar .top-menu-trigger,
   .guide-topbar .header-link,
   .guide-topbar .subtle-header-link,
   .public-profile-topbar .subtle-header-link {
