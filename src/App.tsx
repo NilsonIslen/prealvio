@@ -486,7 +486,7 @@ function GuidePage() {
 
   return (
     <main className="app-shell guide-shell">
-      <header className="topbar">
+      <header className="topbar guide-topbar">
         <Brand />
         <div className="topbar-actions">
           <a className="header-link muted" href={returnPath}>
