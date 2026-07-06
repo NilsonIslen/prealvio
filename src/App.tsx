@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   BookOpen,
   Check,
@@ -289,6 +289,20 @@ const mergeQuestions = (
         ? baseQuestion.values
         : parseQuestionValues(baseQuestion, answer),
     }
+  })
+
+const applyProfileAnswers = (questions: Question[], profile: PrivateProfile) =>
+  questions.map((question) => {
+    const savedAnswer = profile.answers.find((answer) => answer.id === question.id)
+
+    return savedAnswer
+      ? {
+          ...question,
+          answer: savedAnswer.answer,
+          values: parseQuestionValues(question, savedAnswer.answer),
+          price: savedAnswer.price,
+        }
+      : question
   })
 
 const countWords = (value: string) =>
@@ -883,6 +897,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
 
 function CreatorPage() {
   const [questions, setQuestions] = useState(initialQuestions)
+  const privateProfileRef = useRef<PrivateProfile | null>(null)
   const [authToken, setAuthToken] = useState(
     () => localStorage.getItem('revelox-auth-token') ?? '',
   )
@@ -914,9 +929,15 @@ function CreatorPage() {
     apiRequest<{ questions: QuestionDefinition[] }>('/api/questions')
       .then(({ questions: definitions }) => {
         const storedProfileId = localStorage.getItem('revelox-profile-id') ?? ''
-        setQuestions((current) =>
-          applyStoredDrafts(mergeQuestions(definitions, current), storedProfileId),
-        )
+        setQuestions((current) => {
+          const profile = privateProfileRef.current
+          const mergedQuestions = mergeQuestions(definitions, current)
+          const hydratedQuestions = profile
+            ? applyProfileAnswers(mergedQuestions, profile)
+            : mergedQuestions
+
+          return applyStoredDrafts(hydratedQuestions, profile?.id ?? storedProfileId)
+        })
       })
       .catch(() => undefined)
   }, [])
@@ -926,28 +947,17 @@ function CreatorPage() {
       headers: getAuthHeaders(authToken),
     })
       .then((profile) => {
+        privateProfileRef.current = profile
         if (!authToken) setAuthToken(COOKIE_SESSION)
         setOwnerAddress(profile.ownerAddress)
         setProfileId(profile.id)
         localStorage.setItem('revelox-profile-id', profile.id)
         setQuestions((current) =>
-          applyStoredDrafts(current.map((question) => {
-            const savedAnswer = profile.answers.find(
-              (answer) => answer.id === question.id,
-            )
-
-            return savedAnswer
-              ? {
-                  ...question,
-                  answer: savedAnswer.answer,
-                  values: parseQuestionValues(question, savedAnswer.answer),
-                  price: savedAnswer.price,
-                }
-              : question
-          }), profile.id),
+          applyStoredDrafts(applyProfileAnswers(current, profile), profile.id),
         )
       })
       .catch(() => {
+        privateProfileRef.current = null
         localStorage.removeItem('revelox-auth-token')
         localStorage.removeItem('revelox-profile-id')
         setAuthToken('')
@@ -1083,6 +1093,7 @@ function CreatorPage() {
       localStorage.removeItem('revelox-auth-token')
       localStorage.removeItem('revelox-profile-id')
       localStorage.removeItem(LOGIN_INTENT_STORAGE_KEY)
+      privateProfileRef.current = null
       setAuthToken('')
       setOwnerAddress('')
       setProfileId('')
