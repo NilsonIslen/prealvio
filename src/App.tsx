@@ -855,7 +855,7 @@ function SupportPage() {
 
           {sent && (
             <p className="form-success">
-              Mensaje enviado. Te responderemos por el contacto indicado.
+              Mensaje registrado. Revisaremos el caso con el contacto indicado.
             </p>
           )}
 

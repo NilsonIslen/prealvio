@@ -1,6 +1,8 @@
 import { createServer } from 'node:http'
 import { createHash } from 'node:crypto'
-import nodemailer from 'nodemailer'
+import { appendFile, mkdir } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { findIncomingPayment } from './nano-rpc.mjs'
 import { getQuestion, questions } from './questions.mjs'
 import { createId, createToken, mutateStore, readStore } from './store.mjs'
@@ -19,12 +21,9 @@ const rateLimitWriteMax = Number(process.env.REVELOX_RATE_LIMIT_WRITE_MAX ?? 60)
 const rateLimitPaymentMax = Number(process.env.REVELOX_RATE_LIMIT_PAYMENT_MAX ?? 30)
 const paymentChecks = new Map()
 const rateLimitBuckets = new Map()
-const supportEmailTo = process.env.SUPPORT_EMAIL_TO ?? 'nilislen@gmail.com'
-const smtpHost = process.env.SMTP_HOST ?? ''
-const smtpPort = Number(process.env.SMTP_PORT ?? 587)
-const smtpUser = process.env.SMTP_USER ?? ''
-const smtpPass = process.env.SMTP_PASS ?? ''
-const smtpFrom = process.env.SMTP_FROM ?? smtpUser
+const __dirname = dirname(fileURLToPath(import.meta.url))
+const supportLogPath =
+  process.env.REVELOX_SUPPORT_LOG_PATH ?? join(__dirname, 'data', 'support-messages.txt')
 
 const sendJson = (response, status, data, headers = {}) => {
   response.writeHead(status, {
@@ -54,60 +53,27 @@ const readBody = async (request) => {
   return JSON.parse(Buffer.concat(chunks).toString('utf8'))
 }
 
-const escapeHtml = (value) =>
-  String(value ?? '')
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;')
-
 const normalizeSupportText = (value, maxLength) =>
   String(value ?? '').trim().slice(0, maxLength)
 
-const sendSupportEmail = async ({ reason, contact, description, url }) => {
-  if (!smtpHost || !smtpPort || !smtpFrom) {
-    throw new Error('El correo de soporte no está configurado')
-  }
-
-  const transporter = nodemailer.createTransport({
-    host: smtpHost,
-    port: smtpPort,
-    secure: smtpPort === 465,
-    auth: smtpUser && smtpPass
-      ? {
-          user: smtpUser,
-          pass: smtpPass,
-        }
-      : undefined,
-  })
-
-  const safeReason = escapeHtml(reason)
-  const safeContact = escapeHtml(contact)
-  const safeDescription = escapeHtml(description).replaceAll('\n', '<br>')
-  const safeUrl = escapeHtml(url)
-
-  await transporter.sendMail({
-    from: smtpFrom,
-    to: supportEmailTo,
-    replyTo: contact.includes('@') ? contact : undefined,
-    subject: `Soporte Revelox: ${reason}`,
-    text: [
+const saveSupportMessage = async ({ reason, contact, description, url, ip }) => {
+  await mkdir(dirname(supportLogPath), { recursive: true })
+  await appendFile(
+    supportLogPath,
+    [
+      '========================================',
+      `Fecha: ${new Date().toISOString()}`,
+      `IP: ${ip}`,
       `Motivo: ${reason}`,
       `Contacto: ${contact}`,
       `Página: ${url}`,
       '',
+      'Descripción:',
       description,
+      '',
     ].join('\n'),
-    html: `
-      <h2>Solicitud de soporte Revelox</h2>
-      <p><strong>Motivo:</strong> ${safeReason}</p>
-      <p><strong>Contacto:</strong> ${safeContact}</p>
-      <p><strong>Página:</strong> ${safeUrl}</p>
-      <p><strong>Descripción:</strong></p>
-      <p>${safeDescription}</p>
-    `,
-  })
+    'utf8',
+  )
 }
 
 const getClientIp = (request) =>
@@ -561,20 +527,21 @@ const server = createServer(async (request, response) => {
         return
       }
 
-      await sendSupportEmail({
+      await saveSupportMessage({
         reason,
         contact,
         description,
         url: pageUrl || 'No informado',
+        ip: getClientIp(request),
       })
 
-      sendJson(response, 200, { ok: true })
+      sendJson(response, 200, { ok: true, path: supportLogPath })
     } catch (error) {
       sendJson(response, 503, {
         error:
           error instanceof Error
             ? error.message
-            : 'No se pudo enviar el mensaje de soporte',
+            : 'No se pudo guardar el mensaje de soporte',
       })
     }
     return
