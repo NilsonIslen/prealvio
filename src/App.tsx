@@ -488,7 +488,13 @@ const getGuideReturnPath = () => {
   return returnPath
 }
 
-function TopMenu({ onLogout }: { onLogout?: () => void }) {
+function TopMenu({
+  createProfileInNewTab = false,
+  onLogout,
+}: {
+  createProfileInNewTab?: boolean
+  onLogout?: () => void
+}) {
   return (
     <details className="top-menu">
       <summary className="top-menu-trigger">
@@ -497,7 +503,13 @@ function TopMenu({ onLogout }: { onLogout?: () => void }) {
         <ChevronDown size={15} />
       </summary>
       <nav className="top-menu-panel" aria-label="Opciones de Revelox">
-        <a href="/">Crear mi perfil</a>
+        <a
+          href="/"
+          target={createProfileInNewTab ? '_blank' : undefined}
+          rel={createProfileInNewTab ? 'noreferrer' : undefined}
+        >
+          Crear mi perfil
+        </a>
         <a
           className={!xnoCreatorStoreUrl ? 'unavailable' : undefined}
           href={xnoCreatorStoreUrl || undefined}
@@ -898,7 +910,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
       <header className="topbar public-profile-topbar">
         <Brand />
         <div className="topbar-actions">
-          <TopMenu />
+          <TopMenu createProfileInNewTab />
         </div>
       </header>
 
