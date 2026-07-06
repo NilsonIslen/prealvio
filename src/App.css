@@ -1168,6 +1168,21 @@ h2 {
     justify-content: center;
   }
 
+  .public-profile-topbar {
+    align-items: center;
+    flex-direction: row;
+  }
+
+  .public-profile-topbar .topbar-actions {
+    width: auto;
+    flex-direction: row;
+    align-items: center;
+  }
+
+  .public-profile-topbar .subtle-header-link {
+    width: auto;
+  }
+
   .guide-consent-link {
     align-items: flex-start;
     justify-content: flex-start;

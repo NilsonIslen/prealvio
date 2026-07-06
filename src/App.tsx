@@ -769,7 +769,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
 
   return (
     <main className="app-shell public-shell">
-      <header className="topbar">
+      <header className="topbar public-profile-topbar">
         <Brand />
         <div className="topbar-actions">
           <a className="subtle-header-link" href={window.location.pathname}>
