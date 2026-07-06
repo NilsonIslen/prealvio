@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { type FormEvent, useEffect, useRef, useState } from 'react'
 import {
   BookOpen,
   Check,
@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   LoaderCircle,
   Lock,
+  Send,
   Trash2,
   UserRound,
   Wallet,
@@ -527,7 +528,7 @@ function TopMenu({
           Comprar XNO a un proveedor global
         </a>
         <a href={getGuideHref()}>Guía</a>
-        <a href={getGuideHref('soporte')}>Soporte</a>
+        <a href="/soporte">Soporte</a>
         {onLogout && (
           <button type="button" onClick={onLogout}>
             Cerrar sesión
@@ -748,6 +749,122 @@ function LoadingPanel({ message }: { message: string }) {
       <LoaderCircle className="spin" size={30} />
       <p>{message}</p>
     </div>
+  )
+}
+
+function SupportPage() {
+  const [reason, setReason] = useState('')
+  const [contact, setContact] = useState('')
+  const [description, setDescription] = useState('')
+  const [supportState, setSupportState] = useState<RequestState>({
+    loading: false,
+    error: '',
+  })
+  const [sent, setSent] = useState(false)
+
+  const sendSupportRequest = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    setSupportState({ loading: true, error: '' })
+    setSent(false)
+
+    try {
+      await apiRequest<{ ok: boolean }>('/api/support', {
+        method: 'POST',
+        body: JSON.stringify({
+          reason,
+          contact,
+          description,
+          url: getCurrentPagePath(),
+        }),
+      })
+      setReason('')
+      setContact('')
+      setDescription('')
+      setSent(true)
+      setSupportState({ loading: false, error: '' })
+    } catch (error) {
+      setSupportState({
+        loading: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'No se pudo enviar el mensaje',
+      })
+    }
+  }
+
+  return (
+    <main className="app-shell support-shell">
+      <header className="topbar guide-topbar">
+        <Brand />
+        <div className="topbar-actions">
+          <TopMenu />
+        </div>
+      </header>
+
+      <section className="support-page">
+        <div className="guide-heading">
+          <Send size={28} />
+          <h1>Soporte</h1>
+          <p>Cuéntanos qué ocurre y deja un contacto para responderte.</p>
+        </div>
+
+        <form className="support-form" onSubmit={sendSupportRequest}>
+          <label className="field-label">
+            <span>Motivo</span>
+            <input
+              maxLength={120}
+              onChange={(event) => setReason(event.target.value)}
+              placeholder="Ejemplo: problema con pago, sesión o redacción"
+              required
+              value={reason}
+            />
+          </label>
+
+          <label className="field-label">
+            <span>Contacto</span>
+            <input
+              maxLength={160}
+              onChange={(event) => setContact(event.target.value)}
+              placeholder="Correo, WhatsApp o forma de contacto"
+              required
+              value={contact}
+            />
+          </label>
+
+          <label className="field-label full-width-field">
+            <span>Descripción</span>
+            <textarea
+              maxLength={4000}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Describe el caso con el mayor detalle posible"
+              required
+              rows={7}
+              value={description}
+            />
+          </label>
+
+          <button className="primary-action" disabled={supportState.loading} type="submit">
+            {supportState.loading ? (
+              <LoaderCircle className="spin" size={18} />
+            ) : (
+              <Send size={18} />
+            )}
+            Enviar soporte
+          </button>
+
+          {sent && (
+            <p className="form-success">
+              Mensaje enviado. Te responderemos por el contacto indicado.
+            </p>
+          )}
+
+          {supportState.error && (
+            <p className="form-error">{supportState.error}</p>
+          )}
+        </form>
+      </section>
+    </main>
   )
 }
 
@@ -1671,6 +1788,7 @@ function App() {
   const profileId = new URLSearchParams(window.location.search).get('profile')
   const path = window.location.pathname.replace(/\/+$/, '') || '/'
   if (path === '/guia') return <GuidePage />
+  if (path === '/soporte') return <SupportPage />
   return profileId ? <PublicProfilePage profileId={profileId} /> : <CreatorPage />
 }
 

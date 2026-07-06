@@ -1,5 +1,6 @@
 import { createServer } from 'node:http'
 import { createHash } from 'node:crypto'
+import nodemailer from 'nodemailer'
 import { findIncomingPayment } from './nano-rpc.mjs'
 import { getQuestion, questions } from './questions.mjs'
 import { createId, createToken, mutateStore, readStore } from './store.mjs'
@@ -18,6 +19,12 @@ const rateLimitWriteMax = Number(process.env.REVELOX_RATE_LIMIT_WRITE_MAX ?? 60)
 const rateLimitPaymentMax = Number(process.env.REVELOX_RATE_LIMIT_PAYMENT_MAX ?? 30)
 const paymentChecks = new Map()
 const rateLimitBuckets = new Map()
+const supportEmailTo = process.env.SUPPORT_EMAIL_TO ?? 'nilislen@gmail.com'
+const smtpHost = process.env.SMTP_HOST ?? ''
+const smtpPort = Number(process.env.SMTP_PORT ?? 587)
+const smtpUser = process.env.SMTP_USER ?? ''
+const smtpPass = process.env.SMTP_PASS ?? ''
+const smtpFrom = process.env.SMTP_FROM ?? smtpUser
 
 const sendJson = (response, status, data, headers = {}) => {
   response.writeHead(status, {
@@ -45,6 +52,62 @@ const readBody = async (request) => {
 
   if (!chunks.length) return {}
   return JSON.parse(Buffer.concat(chunks).toString('utf8'))
+}
+
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+
+const normalizeSupportText = (value, maxLength) =>
+  String(value ?? '').trim().slice(0, maxLength)
+
+const sendSupportEmail = async ({ reason, contact, description, url }) => {
+  if (!smtpHost || !smtpPort || !smtpFrom) {
+    throw new Error('El correo de soporte no está configurado')
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: smtpHost,
+    port: smtpPort,
+    secure: smtpPort === 465,
+    auth: smtpUser && smtpPass
+      ? {
+          user: smtpUser,
+          pass: smtpPass,
+        }
+      : undefined,
+  })
+
+  const safeReason = escapeHtml(reason)
+  const safeContact = escapeHtml(contact)
+  const safeDescription = escapeHtml(description).replaceAll('\n', '<br>')
+  const safeUrl = escapeHtml(url)
+
+  await transporter.sendMail({
+    from: smtpFrom,
+    to: supportEmailTo,
+    replyTo: contact.includes('@') ? contact : undefined,
+    subject: `Soporte Revelox: ${reason}`,
+    text: [
+      `Motivo: ${reason}`,
+      `Contacto: ${contact}`,
+      `Página: ${url}`,
+      '',
+      description,
+    ].join('\n'),
+    html: `
+      <h2>Solicitud de soporte Revelox</h2>
+      <p><strong>Motivo:</strong> ${safeReason}</p>
+      <p><strong>Contacto:</strong> ${safeContact}</p>
+      <p><strong>Página:</strong> ${safeUrl}</p>
+      <p><strong>Descripción:</strong></p>
+      <p>${safeDescription}</p>
+    `,
+  })
 }
 
 const getClientIp = (request) =>
@@ -480,6 +543,40 @@ const server = createServer(async (request, response) => {
 
   if (request.method === 'GET' && url.pathname === '/api/questions') {
     sendJson(response, 200, { questions })
+    return
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/support') {
+    try {
+      const body = await readBody(request)
+      const reason = normalizeSupportText(body.reason, 120)
+      const contact = normalizeSupportText(body.contact, 160)
+      const description = normalizeSupportText(body.description, 4000)
+      const pageUrl = normalizeSupportText(body.url, 500)
+
+      if (!reason || !contact || !description) {
+        sendJson(response, 400, {
+          error: 'Completa motivo, contacto y descripción',
+        })
+        return
+      }
+
+      await sendSupportEmail({
+        reason,
+        contact,
+        description,
+        url: pageUrl || 'No informado',
+      })
+
+      sendJson(response, 200, { ok: true })
+    } catch (error) {
+      sendJson(response, 503, {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'No se pudo enviar el mensaje de soporte',
+      })
+    }
     return
   }
 

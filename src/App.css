@@ -517,6 +517,17 @@ h2 {
   line-height: 1.45;
 }
 
+.form-success {
+  margin: 0;
+  padding: 11px 12px;
+  border-radius: 8px;
+  color: #286042;
+  font-size: 0.9rem;
+  font-weight: 850;
+  line-height: 1.35;
+  background: #eafff1;
+}
+
 .address-box {
   display: grid;
   gap: 8px;
@@ -969,6 +980,28 @@ h2 {
   width: min(100% - 32px, 860px);
   margin: 0 auto;
   padding: clamp(28px, 5vw, 52px) 0;
+}
+
+.support-shell {
+  padding-bottom: 56px;
+}
+
+.support-page {
+  display: grid;
+  gap: 18px;
+  width: min(100% - 32px, 680px);
+  margin: 0 auto;
+  padding: clamp(28px, 5vw, 52px) 0;
+}
+
+.support-form {
+  display: grid;
+  gap: 14px;
+  padding: clamp(18px, 3vw, 26px);
+  border: 1px solid rgba(32, 43, 48, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 16px 42px rgba(42, 54, 58, 0.08);
 }
 
 .guide-heading {
