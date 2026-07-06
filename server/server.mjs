@@ -193,6 +193,7 @@ const isCurrentAnswer = (question, item) => {
 
 const getPublicProfile = (profile) => ({
   id: profile.id,
+  ownerIdentifier: profile.ownerAddress.slice(-8),
   createdAt: profile.createdAt,
   answers: profile.answers.flatMap((item) => {
     const question = getQuestion(item.id)

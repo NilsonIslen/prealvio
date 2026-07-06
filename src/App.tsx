@@ -67,6 +67,7 @@ type QuestionDefinition = {
 
 type PublicProfile = {
   id: string
+  ownerIdentifier: string
   createdAt: string
   answers: Array<{
     id: number
@@ -708,6 +709,12 @@ function GuidePage() {
             garantiza que una revelación cumpla una expectativa específica ni
             reemplaza acuerdos personales entre usuarios.
           </p>
+          <p>
+            Antes de revelar una tarjeta, el perfil no permite identificar por
+            sí mismo a la persona titular. Puedes reconocerlo por los últimos 8
+            caracteres de su wallet Nano o porque esa persona compartió
+            directamente el enlace contigo.
+          </p>
         </article>
 
         <article className="guide-section" id="soporte">
@@ -918,7 +925,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
         <div className="profile-avatar">
           <img src="/favicon.png" alt="" aria-hidden="true" />
         </div>
-        <p>Perfil compartido: revisa sus revelaciones ocultas.</p>
+        <p>Titular · {profile.ownerIdentifier}</p>
       </section>
 
       <section className="public-profile-grid">
