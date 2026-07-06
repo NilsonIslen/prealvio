@@ -918,7 +918,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
         <div className="profile-avatar">
           <img src="/favicon.png" alt="" aria-hidden="true" />
         </div>
-        <p>Identifica este perfil con la persona que compartió el enlace.</p>
+        <p>Perfil compartido: revisa sus revelaciones ocultas.</p>
       </section>
 
       <section className="public-profile-grid">
