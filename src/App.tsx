@@ -729,7 +729,8 @@ function GuidePage() {
             Antes de revelar una tarjeta, el perfil no permite identificar por
             sí mismo a la persona titular. Puedes reconocerlo por los últimos 8
             caracteres de su wallet Nano o porque esa persona compartió
-            directamente el enlace contigo.
+            directamente el enlace contigo. Los enlaces públicos pueden usar
+            ese identificador corto para ser más fáciles de compartir.
           </p>
         </article>
 
@@ -1180,8 +1181,9 @@ function CreatorPage() {
 
   const isLoggedIn = Boolean(authToken)
   const sessionIdentifier = getSessionIdentifier(ownerAddress)
-  const shareUrl = profileId
-    ? `${window.location.origin}${window.location.pathname}?profile=${profileId}`
+  const profileShareIdentifier = sessionIdentifier || profileId
+  const shareUrl = profileShareIdentifier
+    ? `${window.location.origin}${window.location.pathname}?profile=${profileShareIdentifier}`
     : ''
   useEffect(() => {
     apiRequest<{ questions: QuestionDefinition[] }>('/api/questions')

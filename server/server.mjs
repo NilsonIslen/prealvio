@@ -177,6 +177,26 @@ const normalizeNanoAmount = (value) => {
 const getProfileId = (ownerAddress) =>
   createHash('sha256').update(ownerAddress).digest('hex').slice(0, 32)
 
+const getOwnerIdentifier = (ownerAddress) => ownerAddress.slice(-8)
+
+const findProfileByReference = (store, reference) => {
+  const normalizedReference = String(reference ?? '').trim()
+  const profileById = store.profiles.find(
+    (profile) => profile.id === normalizedReference,
+  )
+
+  if (profileById) return { profile: profileById, ambiguous: false }
+
+  const matchingProfiles = store.profiles.filter(
+    (profile) => getOwnerIdentifier(profile.ownerAddress) === normalizedReference,
+  )
+
+  return {
+    profile: matchingProfiles.length === 1 ? matchingProfiles[0] : null,
+    ambiguous: matchingProfiles.length > 1,
+  }
+}
+
 const getQuestionKey = (question) => question?.key ?? question?.prompt
 
 const countWords = (value) => String(value ?? '').trim().split(/\s+/).filter(Boolean).length
@@ -223,7 +243,7 @@ const isCurrentAnswer = (question, item) => {
 
 const getPublicProfile = (profile) => ({
   id: profile.id,
-  ownerIdentifier: profile.ownerAddress.slice(-8),
+  ownerIdentifier: getOwnerIdentifier(profile.ownerAddress),
   createdAt: profile.createdAt,
   answers: profile.answers.flatMap((item) => {
     const question = getQuestion(item.id)
@@ -845,11 +865,16 @@ const server = createServer(async (request, response) => {
     return
   }
 
-  const profileMatch = url.pathname.match(/^\/api\/profiles\/([a-f0-9]+)$/)
+  const profileMatch = url.pathname.match(/^\/api\/profiles\/([a-z0-9]+)$/i)
 
   if (request.method === 'GET' && profileMatch) {
     const store = await readStore()
-    const profile = store.profiles.find((item) => item.id === profileMatch[1])
+    const { profile, ambiguous } = findProfileByReference(store, profileMatch[1])
+
+    if (ambiguous) {
+      sendJson(response, 409, { error: 'Identificador de perfil ambiguo' })
+      return
+    }
 
     if (!profile) {
       sendJson(response, 404, { error: 'Perfil no encontrado' })
@@ -861,22 +886,27 @@ const server = createServer(async (request, response) => {
   }
 
   const unlockMatch = url.pathname.match(
-    /^\/api\/profiles\/([a-f0-9]+)\/answers\/(\d+)\/unlock$/,
+    /^\/api\/profiles\/([a-z0-9]+)\/answers\/(\d+)\/unlock$/i,
   )
 
   const unlockStartMatch = url.pathname.match(
-    /^\/api\/profiles\/([a-f0-9]+)\/answers\/(\d+)\/unlock\/start$/,
+    /^\/api\/profiles\/([a-z0-9]+)\/answers\/(\d+)\/unlock\/start$/i,
   )
 
   if (request.method === 'POST' && unlockStartMatch) {
     const store = await readStore()
-    const profile = store.profiles.find((item) => item.id === unlockStartMatch[1])
+    const { profile, ambiguous } = findProfileByReference(store, unlockStartMatch[1])
     const question = getQuestion(Number(unlockStartMatch[2]))
     const answer = profile?.answers.find(
       (item) =>
         item.id === Number(unlockStartMatch[2]) &&
         isCurrentAnswer(question, item),
     )
+
+    if (ambiguous) {
+      sendJson(response, 409, { error: 'Identificador de perfil ambiguo' })
+      return
+    }
 
     if (!profile || !answer) {
       sendJson(response, 404, { error: 'Respuesta no encontrada' })
@@ -904,13 +934,18 @@ const server = createServer(async (request, response) => {
       const body = await readBody(request)
       const intentId = String(body.intentId ?? '').trim()
       const store = await readStore()
-      const profile = store.profiles.find((item) => item.id === unlockMatch[1])
+      const { profile, ambiguous } = findProfileByReference(store, unlockMatch[1])
       const question = getQuestion(Number(unlockMatch[2]))
       const answer = profile?.answers.find(
         (item) =>
           item.id === Number(unlockMatch[2]) &&
         isCurrentAnswer(question, item),
       )
+
+      if (ambiguous) {
+        sendJson(response, 409, { error: 'Identificador de perfil ambiguo' })
+        return
+      }
 
       if (!profile || !answer) {
         sendJson(response, 404, { error: 'Respuesta no encontrada' })
