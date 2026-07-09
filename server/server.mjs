@@ -873,11 +873,29 @@ const server = createServer(async (request, response) => {
         competingFeeIntents.length === 0 && balanceBeforePayment.hasPending
           ? balanceBeforePayment.payableXno
           : undefined
-      const { intent, payment } = await verifyPaymentIntent(
-        intentId,
-        'platform_fee',
-        fallbackAmountNano,
-      )
+      let intent
+      let payment
+
+      try {
+        ;({ intent, payment } = await verifyPaymentIntent(
+          intentId,
+          'platform_fee',
+          fallbackAmountNano,
+        ))
+      } catch (error) {
+        const message = error instanceof Error ? error.message : ''
+
+        if (!message.includes('venció')) throw error
+
+        intent = currentIntent
+        payment = await findIncomingPayment({
+          receiverWallet: currentIntent.receiverAddress,
+          amountNano: currentIntent.amountNano,
+          fallbackAmountNano,
+          createdAfter: currentIntent.createdAt,
+          excludedHashes: store.usedPayments.map((item) => item.hash),
+        })
+      }
 
       if (intent.ownerAddress !== session.ownerAddress) {
         sendJson(response, 400, { error: 'El pago no corresponde a esta sesión' })
