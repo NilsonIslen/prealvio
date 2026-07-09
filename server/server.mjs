@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto'
 import { appendFile, mkdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { findIncomingPayment } from './nano-rpc.mjs'
+import { findIncomingPayment, formatRawAsNano, nanoToRaw } from './nano-rpc.mjs'
 import { decryptAnswer, encryptAnswer } from './answer-crypto.mjs'
 import { getQuestion, questions } from './questions.mjs'
 import { createId, createToken, mutateStore, readStore } from './store.mjs'
@@ -13,6 +13,9 @@ const loginAmountNano = '0.1'
 const loginReceiverAddress =
   process.env.LOGIN_RECEIVER_NANO_ADDRESS ??
   'nano_19o77pnp71wufuic4txepeumhtt6imouy71ekwi7165suax43dxeu3t4ro5q'
+const platformFeePercent = 10
+const platformFeeMinimumRaw = BigInt(nanoToRaw('0.01'))
+const platformFeeQuantumRaw = BigInt(nanoToRaw('0.000001'))
 const paymentIntentTtlMs = 15 * 60 * 1000
 const paymentCheckIntervalMs = 12 * 1000
 const maxRequestBodyBytes = Number(process.env.REVELOX_MAX_BODY_BYTES ?? 256 * 1024)
@@ -259,9 +262,47 @@ const getPublicProfile = (profile) => ({
   }),
 })
 
-const getPrivateProfile = (profile) => ({
+const getPlatformFeeBalance = (store, ownerAddress) => {
+  const incomeRaw = store.paymentIntents
+    .filter(
+      (intent) =>
+        intent.purpose === 'unlock' &&
+        intent.status === 'completed' &&
+        intent.receiverAddress === ownerAddress &&
+        intent.paymentHash,
+    )
+    .reduce((total, intent) => total + BigInt(nanoToRaw(intent.amountNano)), 0n)
+  const grossFeeRaw = (incomeRaw * BigInt(platformFeePercent)) / 100n
+  const feeRaw = (grossFeeRaw / platformFeeQuantumRaw) * platformFeeQuantumRaw
+  const paidRaw = store.paymentIntents
+    .filter(
+      (intent) =>
+        intent.purpose === 'platform_fee' &&
+        intent.status === 'completed' &&
+        intent.ownerAddress === ownerAddress &&
+        intent.paymentHash,
+    )
+    .reduce((total, intent) => total + BigInt(nanoToRaw(intent.amountNano)), 0n)
+  const pendingRaw = feeRaw > paidRaw ? feeRaw - paidRaw : 0n
+  const payableRaw = pendingRaw >= platformFeeMinimumRaw ? pendingRaw : 0n
+
+  return {
+    percent: platformFeePercent,
+    incomeXno: formatRawAsNano(incomeRaw.toString()),
+    totalFeeXno: formatRawAsNano(feeRaw.toString()),
+    paidXno: formatRawAsNano(paidRaw.toString()),
+    pendingXno: formatRawAsNano(pendingRaw.toString()),
+    payableXno: formatRawAsNano(payableRaw.toString()),
+    hasPending: payableRaw > 0n,
+    minimumXno: formatRawAsNano(platformFeeMinimumRaw.toString()),
+    receiverAddress: loginReceiverAddress,
+  }
+}
+
+const getPrivateProfile = (profile, store) => ({
   ...getPublicProfile(profile),
   ownerAddress: profile.ownerAddress,
+  platformFee: store ? getPlatformFeeBalance(store, profile.ownerAddress) : undefined,
   answers: profile.answers.flatMap((item) => {
     const question = getQuestion(item.id)
 
@@ -431,6 +472,7 @@ const createPaymentIntent = async ({
   baseAmount,
   profileId,
   answerId,
+  ownerAddress,
 }) =>
   mutateStore((store) => {
     const now = Date.now()
@@ -446,6 +488,7 @@ const createPaymentIntent = async ({
       amountNano: createUniqueAmount(baseAmount, store.paymentIntents),
       profileId,
       answerId,
+      ownerAddress,
       status: 'pending',
       createdAt: new Date(now).toISOString(),
       expiresAt: new Date(now + paymentIntentTtlMs).toISOString(),
@@ -736,6 +779,134 @@ const server = createServer(async (request, response) => {
     return
   }
 
+  if (request.method === 'POST' && url.pathname === '/api/platform-fee/start') {
+    const store = await readStore()
+    const session = getSession(request, store)
+
+    if (!session) {
+      sendJson(response, 401, { error: 'Sesión inválida o vencida' })
+      return
+    }
+
+    const balance = getPlatformFeeBalance(store, session.ownerAddress)
+
+    if (!balance.hasPending) {
+      sendJson(response, 400, {
+        error: `No tienes saldo pendiente de comisión. El cobro inicia desde ${balance.minimumXno} XNO.`,
+      })
+      return
+    }
+
+    const existingIntent = store.paymentIntents.find(
+      (intent) =>
+        intent.purpose === 'platform_fee' &&
+        intent.status === 'pending' &&
+        intent.ownerAddress === session.ownerAddress &&
+        new Date(intent.expiresAt).getTime() > Date.now(),
+    )
+
+    const intent =
+      existingIntent ??
+      (await createPaymentIntent({
+        purpose: 'platform_fee',
+        receiverAddress: loginReceiverAddress,
+        baseAmount: balance.payableXno,
+        ownerAddress: session.ownerAddress,
+      }))
+
+    sendJson(response, 201, {
+      intentId: intent.id,
+      receiverAddress: intent.receiverAddress,
+      amountNano: intent.amountNano,
+      expiresAt: intent.expiresAt,
+      balance,
+    })
+    return
+  }
+
+  if (request.method === 'POST' && url.pathname === '/api/platform-fee/verify') {
+    try {
+      const body = await readBody(request)
+      const intentId = String(body.intentId ?? '').trim()
+      const store = await readStore()
+      const session = getSession(request, store)
+
+      if (!session) {
+        sendJson(response, 401, { error: 'Sesión inválida o vencida' })
+        return
+      }
+
+      const currentIntent = store.paymentIntents.find(
+        (intent) =>
+          intent.id === intentId &&
+          intent.purpose === 'platform_fee' &&
+          intent.ownerAddress === session.ownerAddress,
+      )
+
+      if (!currentIntent) {
+        sendJson(response, 404, { error: 'Solicitud de comisión no encontrada' })
+        return
+      }
+
+      if (currentIntent.status === 'completed' && currentIntent.paymentHash) {
+        const balance = getPlatformFeeBalance(store, session.ownerAddress)
+        sendJson(response, 200, {
+          message: 'Comisión confirmada',
+          paymentHash: currentIntent.paymentHash,
+          balance,
+        })
+        return
+      }
+
+      const { intent, payment } = await verifyPaymentIntent(
+        intentId,
+        'platform_fee',
+      )
+
+      if (intent.ownerAddress !== session.ownerAddress) {
+        sendJson(response, 400, { error: 'El pago no corresponde a esta sesión' })
+        return
+      }
+
+      const balance = await mutateStore((current) => {
+        if (current.usedPayments.some((item) => item.hash === payment.hash)) {
+          throw new Error('Este pago ya fue utilizado')
+        }
+
+        current.usedPayments.push({
+          hash: payment.hash,
+          purpose: 'platform_fee',
+          createdAt: new Date().toISOString(),
+        })
+        const completedIntent = current.paymentIntents.find(
+          (item) => item.id === intent.id,
+        )
+
+        if (completedIntent) {
+          completedIntent.status = 'completed'
+          completedIntent.paymentHash = payment.hash
+          completedIntent.ownerAddress = session.ownerAddress
+        }
+
+        return getPlatformFeeBalance(current, session.ownerAddress)
+      })
+
+      sendJson(response, 200, {
+        message: 'Comisión confirmada',
+        paymentHash: payment.hash,
+        balance,
+      })
+    } catch (error) {
+      sendJson(response, 422, {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'No se pudo validar el pago de comisión',
+      })
+    }
+    return
+  }
+
   if (request.method === 'GET' && url.pathname === '/api/me') {
     const store = await readStore()
     const session = getSession(request, store)
@@ -750,7 +921,7 @@ const server = createServer(async (request, response) => {
       return
     }
 
-    sendJson(response, 200, getPrivateProfile(profile))
+    sendJson(response, 200, getPrivateProfile(profile, store))
     return
   }
 
@@ -815,10 +986,10 @@ const server = createServer(async (request, response) => {
         if (answer) existingProfile.answers.push(answer)
         existingProfile.answers.sort((left, right) => left.id - right.id)
         existingProfile.updatedAt = new Date().toISOString()
-        return existingProfile
+        return getPrivateProfile(existingProfile, current)
       })
 
-      sendJson(response, 200, getPrivateProfile(profile))
+      sendJson(response, 200, profile)
     } catch (error) {
       sendJson(response, 400, {
         error:
@@ -852,10 +1023,10 @@ const server = createServer(async (request, response) => {
         existingProfile.id = getProfileId(session.ownerAddress)
         existingProfile.answers = answers
         existingProfile.updatedAt = new Date().toISOString()
-        return existingProfile
+        return getPrivateProfile(existingProfile, current)
       })
 
-      sendJson(response, 200, getPrivateProfile(profile))
+      sendJson(response, 200, profile)
     } catch (error) {
       sendJson(response, 400, {
         error:

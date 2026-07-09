@@ -17,9 +17,6 @@ import {
 import './App.css'
 
 const LOGIN_AMOUNT_LABEL = '0,1'
-const DEVELOPMENT_WALLET =
-  import.meta.env.VITE_LOGIN_RECEIVER_NANO_ADDRESS?.trim() ??
-  'nano_19o77pnp71wufuic4txepeumhtt6imouy71ekwi7165suax43dxeu3t4ro5q'
 const LOGIN_INTENT_STORAGE_KEY = 'revelox-login-intent'
 const COOKIE_SESSION = 'cookie-session'
 const xnoCreatorStoreUrl =
@@ -80,6 +77,7 @@ type PublicProfile = {
 
 type PrivateProfile = Omit<PublicProfile, 'answers'> & {
   ownerAddress: string
+  platformFee?: PlatformFeeBalance
   answers: Array<{
     id: number
     questionKey: string
@@ -87,6 +85,18 @@ type PrivateProfile = Omit<PublicProfile, 'answers'> & {
     answer: string
     price: string
   }>
+}
+
+type PlatformFeeBalance = {
+  percent: number
+  incomeXno: string
+  totalFeeXno: string
+  paidXno: string
+  pendingXno: string
+  payableXno: string
+  hasPending: boolean
+  minimumXno: string
+  receiverAddress: string
 }
 
 type RequestState = {
@@ -105,6 +115,10 @@ type PaymentIntent = {
   receiverAddress: string
   amountNano: string
   expiresAt: string
+}
+
+type PlatformFeePaymentIntent = PaymentIntent & {
+  balance: PlatformFeeBalance
 }
 
 const getStoredLoginIntent = () => {
@@ -362,10 +376,6 @@ const xnoToRaw = (value: string) => {
 
 const openNanoPayment = (receiver: string, amount: string) => {
   window.location.href = `nano:${receiver}?amount=${xnoToRaw(amount)}`
-}
-
-const openNanoDonation = (receiver: string) => {
-  window.location.href = `nano:${receiver}`
 }
 
 const copyText = async (value: string) => {
@@ -639,22 +649,19 @@ function GuidePage() {
           </p>
         </div>
 
-        <article className="guide-section guide-donation">
-          <h2>Apoyo voluntario a Revelox</h2>
+        <article className="guide-section">
+          <h2>Comisión de Revelox</h2>
           <p>
-            Quien publica recibe el 100% del precio definido para sus
-            revelaciones. Si Revelox te resulta útil y quieres apoyar su
-            mantenimiento, desarrollo y mejora continua, puedes enviar una
-            donación voluntaria al equipo.
+            Quien publica recibe directamente en su wallet el precio definido
+            para cada revelación. Revelox cobra una comisión del 10% sobre esos
+            ingresos recibidos por el redactor.
           </p>
-          <button
-            className="secondary-action guide-donation-action"
-            type="button"
-            onClick={() => openNanoDonation(DEVELOPMENT_WALLET)}
-          >
-            <Wallet size={18} />
-            Donar al equipo
-          </button>
+          <p>
+            Cuando tengas comisión pendiente, aparecerá un aviso en la parte
+            superior de tu página principal con el saldo a cancelar y un botón
+            de pago. Para evitar cobros demasiado pequeños o conflictos por
+            montos mínimos, el aviso se muestra desde 0,01 XNO pendientes.
+          </p>
         </article>
 
         <article className="guide-section">
@@ -1176,10 +1183,18 @@ function CreatorPage() {
   const [loginIntent, setLoginIntent] = useState<PaymentIntent | null>(
     getStoredLoginIntent,
   )
+  const [platformFeeIntent, setPlatformFeeIntent] =
+    useState<PlatformFeePaymentIntent | null>(null)
   const [authState, setAuthState] = useState<RequestState>({
     loading: false,
     error: '',
   })
+  const [platformFeeState, setPlatformFeeState] = useState<RequestState>({
+    loading: false,
+    error: '',
+  })
+  const [platformFeeBalance, setPlatformFeeBalance] =
+    useState<PlatformFeeBalance | null>(null)
   const [publishState, setPublishState] = useState<RequestState>({
     loading: false,
     error: '',
@@ -1225,6 +1240,7 @@ function CreatorPage() {
         if (!authToken) setAuthToken(COOKIE_SESSION)
         setOwnerAddress(profile.ownerAddress)
         setProfileId(profile.id)
+        setPlatformFeeBalance(profile.platformFee ?? null)
         localStorage.setItem('revelox-profile-id', profile.id)
         setQuestions((current) =>
           applyStoredDrafts(applyProfileAnswers(current, profile), profile.id),
@@ -1237,6 +1253,7 @@ function CreatorPage() {
         setAuthToken('')
         setOwnerAddress('')
         setProfileId('')
+        setPlatformFeeBalance(null)
       })
   }, [authToken])
 
@@ -1356,6 +1373,86 @@ function CreatorPage() {
     setAuthState({ loading: false, error: '' })
   }
 
+  const requestPlatformFeePayment = async () => {
+    setPlatformFeeState({ loading: true, error: '' })
+
+    try {
+      const intent = await apiRequest<PlatformFeePaymentIntent>(
+        '/api/platform-fee/start',
+        {
+          method: 'POST',
+          headers: getAuthHeaders(authToken),
+          body: '{}',
+        },
+      )
+      setPlatformFeeIntent(intent)
+      setPlatformFeeBalance(intent.balance)
+      setPlatformFeeState({ loading: false, error: '' })
+      openNanoPayment(intent.receiverAddress, intent.amountNano)
+    } catch (error) {
+      setPlatformFeeState({
+        loading: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'No se pudo iniciar el pago de comisión',
+      })
+    }
+  }
+
+  useEffect(() => {
+    if (!platformFeeIntent || !authToken) return
+
+    let active = true
+    let checking = false
+    const verifyPlatformFeePayment = async () => {
+      if (checking) return
+      checking = true
+
+      try {
+        const data = await apiRequest<{
+          paymentHash: string
+          balance: PlatformFeeBalance
+        }>('/api/platform-fee/verify', {
+          method: 'POST',
+          headers: getAuthHeaders(authToken),
+          body: JSON.stringify({ intentId: platformFeeIntent.intentId }),
+        })
+
+        if (!active) return
+
+        setPlatformFeeBalance(data.balance)
+        setPlatformFeeIntent(null)
+        setPlatformFeeState({ loading: false, error: '' })
+      } catch (error) {
+        if (!active) return
+
+        const message =
+          error instanceof Error ? error.message : 'Esperando confirmación'
+
+        if (message.includes('venció') || message.includes('utilizado')) {
+          setPlatformFeeIntent(null)
+          setPlatformFeeState({ loading: false, error: message })
+        }
+      } finally {
+        checking = false
+      }
+    }
+
+    void verifyPlatformFeePayment()
+    const interval = window.setInterval(verifyPlatformFeePayment, 12000)
+
+    return () => {
+      active = false
+      window.clearInterval(interval)
+    }
+  }, [authToken, platformFeeIntent])
+
+  const retryPlatformFeePayment = () => {
+    setPlatformFeeIntent(null)
+    setPlatformFeeState({ loading: false, error: '' })
+  }
+
   const logout = async () => {
     try {
       await apiRequest('/api/auth/logout', {
@@ -1372,6 +1469,8 @@ function CreatorPage() {
       setOwnerAddress('')
       setProfileId('')
       setLoginIntent(null)
+      setPlatformFeeIntent(null)
+      setPlatformFeeBalance(null)
       setCopied(false)
       setSavingQuestionId(null)
       setPublishQuestionId(null)
@@ -1384,6 +1483,7 @@ function CreatorPage() {
         })),
       )
       setAuthState({ loading: false, error: '' })
+      setPlatformFeeState({ loading: false, error: '' })
       setPublishState({ loading: false, error: '' })
     }
   }
@@ -1414,6 +1514,7 @@ function CreatorPage() {
         },
       )
       setProfileId(profile.id)
+      setPlatformFeeBalance(profile.platformFee ?? null)
       localStorage.setItem('revelox-profile-id', profile.id)
       const persistedQuestion = questions.find((item) => item.id === questionId)
       const savedAnswer = profile.answers.find(
@@ -1484,6 +1585,64 @@ function CreatorPage() {
           )}
         </div>
       </header>
+
+      {isLoggedIn && platformFeeBalance?.hasPending && (
+        <section className="platform-fee-banner" aria-label="Comisión pendiente">
+          <div>
+            <span>Comisión pendiente</span>
+            <h2>
+              Tienes saldo pendiente a cancelar por tus ingresos:{' '}
+              {platformFeeBalance.payableXno} XNO
+            </h2>
+            <p>
+              Corresponde al {platformFeeBalance.percent}% de tus ingresos
+              recibidos en Revelox. Ingresos registrados:{' '}
+              {platformFeeBalance.incomeXno} XNO. Comisión ya pagada:{' '}
+              {platformFeeBalance.paidXno} XNO.
+            </p>
+          </div>
+
+          {platformFeeIntent ? (
+            <div className="waiting-payment-panel">
+              <div className="waiting-payment" role="status" aria-live="polite">
+                <LoaderCircle className="spin" size={22} />
+                <div>
+                  <strong>Validando pago de comisión</strong>
+                  <span>
+                    Paga exactamente {platformFeeIntent.amountNano} XNO a la
+                    wallet de Revelox.
+                  </span>
+                </div>
+              </div>
+              <button
+                className="secondary-action"
+                type="button"
+                onClick={retryPlatformFeePayment}
+              >
+                Intentar pago de nuevo
+              </button>
+            </div>
+          ) : (
+            <button
+              className="primary-action"
+              type="button"
+              onClick={() => requestConsent(requestPlatformFeePayment)}
+              disabled={platformFeeState.loading}
+            >
+              {platformFeeState.loading ? (
+                <LoaderCircle className="spin" size={18} />
+              ) : (
+                <Wallet size={18} />
+              )}
+              Pagar comisión
+            </button>
+          )}
+
+          {platformFeeState.error && (
+            <p className="form-error">{platformFeeState.error}</p>
+          )}
+        </section>
+      )}
 
       <section className="creator-intro">
         <aside className="login-card" aria-label="Inicio de sesión Nano">
