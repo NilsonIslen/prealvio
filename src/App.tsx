@@ -1630,9 +1630,8 @@ function CreatorPage() {
             </h2>
             <p>
               Corresponde al {platformFeeBalance.percent}% de tus ingresos
-              recibidos en Revelox. Ingresos registrados:{' '}
-              {platformFeeBalance.incomeXno} XNO. Comisión ya pagada:{' '}
-              {platformFeeBalance.paidXno} XNO.
+              pendientes de liquidar en Revelox. Ingresos pendientes de
+              liquidar comisión: {platformFeeBalance.incomeXno} XNO.
             </p>
           </div>
 

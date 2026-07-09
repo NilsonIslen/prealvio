@@ -285,10 +285,14 @@ const getPlatformFeeBalance = (store, ownerAddress) => {
     .reduce((total, intent) => total + BigInt(nanoToRaw(intent.amountNano)), 0n)
   const pendingRaw = feeRaw > paidRaw ? feeRaw - paidRaw : 0n
   const payableRaw = pendingRaw >= platformFeeMinimumRaw ? pendingRaw : 0n
+  const pendingIncomeRaw =
+    payableRaw > 0n
+      ? (payableRaw * 100n) / BigInt(platformFeePercent)
+      : 0n
 
   return {
     percent: platformFeePercent,
-    incomeXno: formatRawAsNano(incomeRaw.toString()),
+    incomeXno: formatRawAsNano(pendingIncomeRaw.toString()),
     totalFeeXno: formatRawAsNano(feeRaw.toString()),
     paidXno: formatRawAsNano(paidRaw.toString()),
     pendingXno: formatRawAsNano(pendingRaw.toString()),
