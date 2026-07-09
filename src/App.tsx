@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import './App.css'
 
-const LOGIN_AMOUNT = '1'
+const LOGIN_AMOUNT_LABEL = '0,1'
 const DEVELOPMENT_WALLET =
   import.meta.env.VITE_LOGIN_RECEIVER_NANO_ADDRESS?.trim() ??
   'nano_19o77pnp71wufuic4txepeumhtt6imouy71ekwi7165suax43dxeu3t4ro5q'
@@ -683,6 +683,20 @@ function GuidePage() {
             Puedes editar o eliminar tus redacciones cuando lo necesites. Antes
             de guardar, revisa que el texto diga exactamente lo que quieres
             compartir y que el precio para revelarlo sea correcto.
+          </p>
+        </article>
+
+        <article className="guide-section">
+          <h2>Inicio de sesión</h2>
+          <p>
+            El inicio de sesión cuesta {LOGIN_AMOUNT_LABEL} XNO. Ese pago
+            habilita tu sesión en el navegador y dispositivo donde lo realizas.
+          </p>
+          <p>
+            La cookie de sesión queda configurada por 365 días. Además, Revelox
+            conserva el token en el navegador para recuperar la sesión mientras
+            no cierres sesión, no cambies de móvil o navegador, ni borres los
+            datos del sitio.
           </p>
         </article>
 
@@ -1487,9 +1501,10 @@ function CreatorPage() {
           {!isLoggedIn && !loginIntent && (
             <>
               <p className="login-note">
-                El login cuesta {LOGIN_AMOUNT} XNO y queda activo en este
-                navegador. Si cambias de dispositivo, borras los datos del
-                navegador o cierras sesión, deberás iniciar sesión nuevamente.
+                El login cuesta {LOGIN_AMOUNT_LABEL} XNO y queda activo en este
+                navegador por 365 días. Si cambias de dispositivo, borras los
+                datos del navegador o cierras sesión, deberás iniciar sesión
+                nuevamente.
               </p>
               <button
                 className="primary-action"
@@ -1502,7 +1517,7 @@ function CreatorPage() {
                 ) : (
                   <Wallet size={18} />
                 )}
-                Pagar {LOGIN_AMOUNT} XNO para iniciar sesión
+                Pagar {LOGIN_AMOUNT_LABEL} XNO para iniciar sesión
               </button>
             </>
           )}

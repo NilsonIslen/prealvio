@@ -9,7 +9,7 @@ import { getQuestion, questions } from './questions.mjs'
 import { createId, createToken, mutateStore, readStore } from './store.mjs'
 
 const port = Number(process.env.REVELOX_API_PORT ?? 8788)
-const loginAmountNano = '1'
+const loginAmountNano = '0.1'
 const loginReceiverAddress =
   process.env.LOGIN_RECEIVER_NANO_ADDRESS ??
   'nano_19o77pnp71wufuic4txepeumhtt6imouy71ekwi7165suax43dxeu3t4ro5q'
