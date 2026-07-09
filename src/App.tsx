@@ -344,6 +344,21 @@ const questionCharacterCount = (question: Question) => {
   }, 0)
 }
 
+const getQuestionAnswerText = (question: Question) => {
+  if (!question.fields?.length) return question.answer.trim()
+
+  return question.fields
+    .flatMap((field) => {
+      const value = getQuestionFieldValue(question, field)
+      const normalizedValue = Array.isArray(value)
+        ? value.map((item) => item.trim()).filter(Boolean).join(', ')
+        : String(value ?? '').trim()
+
+      return normalizedValue ? [`${field.label}: ${normalizedValue}`] : []
+    })
+    .join('\n')
+}
+
 const isQuestionComplete = (question: Question) =>
   (question.fields?.length
     ? question.fields.filter((field) => {
@@ -1206,6 +1221,7 @@ function CreatorPage() {
     () => localStorage.getItem('revelox-profile-id') ?? '',
   )
   const [copied, setCopied] = useState(false)
+  const [copiedQuestionId, setCopiedQuestionId] = useState<number | null>(null)
   const { consentDialog, requestConsent } = useConsentGate()
 
   const isLoggedIn = Boolean(authToken)
@@ -1267,6 +1283,7 @@ function CreatorPage() {
       }),
     )
     setCopied(false)
+    setCopiedQuestionId(null)
     setPublishState({ loading: false, error: '' })
     setPublishQuestionId(null)
   }
@@ -1288,6 +1305,7 @@ function CreatorPage() {
       }),
     )
     setCopied(false)
+    setCopiedQuestionId(null)
     setPublishState({ loading: false, error: '' })
     setPublishQuestionId(null)
   }
@@ -1477,6 +1495,7 @@ function CreatorPage() {
       setPlatformFeeIntent(null)
       setPlatformFeeBalance(null)
       setCopied(false)
+      setCopiedQuestionId(null)
       setSavingQuestionId(null)
       setPublishQuestionId(null)
       setQuestions((current) =>
@@ -1561,7 +1580,17 @@ function CreatorPage() {
 
   const removeAnswer = async (id: number) => {
     setCopied(false)
+    setCopiedQuestionId(null)
     await persistAnswer(id, 'DELETE')
+  }
+
+  const copyQuestionAnswer = async (question: Question) => {
+    const answerText = getQuestionAnswerText(question)
+
+    if (!answerText) return
+
+    await copyText(answerText)
+    setCopiedQuestionId(question.id)
   }
 
   const copyShareUrl = async () => {
@@ -1951,6 +1980,23 @@ function CreatorPage() {
                       )}
                       Guardar
                     </button>
+                    {hasQuestionContent(question) && (
+                      <button
+                        className="secondary-action"
+                        type="button"
+                        disabled={publishState.loading}
+                        onClick={() => copyQuestionAnswer(question)}
+                      >
+                        {copiedQuestionId === question.id ? (
+                          <Check size={18} />
+                        ) : (
+                          <Copy size={18} />
+                        )}
+                        {copiedQuestionId === question.id
+                          ? 'Redacción copiada'
+                          : 'Copiar redacción'}
+                      </button>
+                    )}
                     {(question.answer ||
                       Object.values(question.values).some(Boolean) ||
                       question.price) && (
