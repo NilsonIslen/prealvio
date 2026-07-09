@@ -858,9 +858,25 @@ const server = createServer(async (request, response) => {
         return
       }
 
+      const competingFeeIntents = store.paymentIntents.filter(
+        (intent) =>
+          intent.id !== intentId &&
+          intent.purpose === 'platform_fee' &&
+          intent.status === 'pending' &&
+          new Date(intent.expiresAt).getTime() > Date.now(),
+      )
+      const balanceBeforePayment = getPlatformFeeBalance(
+        store,
+        session.ownerAddress,
+      )
+      const fallbackAmountNano =
+        competingFeeIntents.length === 0 && balanceBeforePayment.hasPending
+          ? balanceBeforePayment.payableXno
+          : undefined
       const { intent, payment } = await verifyPaymentIntent(
         intentId,
         'platform_fee',
+        fallbackAmountNano,
       )
 
       if (intent.ownerAddress !== session.ownerAddress) {
@@ -886,6 +902,7 @@ const server = createServer(async (request, response) => {
           completedIntent.status = 'completed'
           completedIntent.paymentHash = payment.hash
           completedIntent.ownerAddress = session.ownerAddress
+          completedIntent.amountNano = payment.amountNano
         }
 
         return getPlatformFeeBalance(current, session.ownerAddress)

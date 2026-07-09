@@ -1433,6 +1433,11 @@ function CreatorPage() {
         if (message.includes('venció') || message.includes('utilizado')) {
           setPlatformFeeIntent(null)
           setPlatformFeeState({ loading: false, error: message })
+        } else {
+          setPlatformFeeState({
+            loading: false,
+            error: message,
+          })
         }
       } finally {
         checking = false
