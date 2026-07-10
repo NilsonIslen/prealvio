@@ -6,9 +6,11 @@ import pg from 'pg'
 
 const { Pool } = pg
 const __dirname = dirname(fileURLToPath(import.meta.url))
-const dataPath = join(__dirname, 'data', 'revelox.json')
+const dataPath = join(__dirname, 'data', 'prealvio.json')
 const backupsPath = join(__dirname, 'data', 'backups')
-const backupLimit = Number(process.env.REVELOX_BACKUP_LIMIT ?? 50)
+const backupLimit = Number(
+  process.env.PREALVIO_BACKUP_LIMIT ?? process.env.REVELOX_BACKUP_LIMIT ?? 50,
+)
 const databaseUrl = process.env.DATABASE_URL?.trim()
 const pool = databaseUrl
   ? new Pool({
@@ -228,7 +230,7 @@ async function pruneBackups() {
   if (!Number.isFinite(backupLimit) || backupLimit <= 0) return
 
   const files = (await readdir(backupsPath))
-    .filter((file) => /^revelox-.+\.json$/.test(file))
+    .filter((file) => /^prealvio-.+\.json$/.test(file))
     .sort()
   const excess = files.length - backupLimit
 
@@ -245,7 +247,7 @@ async function backupStore() {
   try {
     await mkdir(backupsPath, { recursive: true })
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-')
-    await copyFile(dataPath, join(backupsPath, `revelox-${timestamp}.json`))
+    await copyFile(dataPath, join(backupsPath, `prealvio-${timestamp}.json`))
     await pruneBackups()
   } catch (error) {
     if (error?.code !== 'ENOENT') throw error

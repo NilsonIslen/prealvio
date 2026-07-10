@@ -18,7 +18,12 @@ import { QRCodeSVG } from 'qrcode.react'
 import './App.css'
 
 const LOGIN_AMOUNT_LABEL = '0,1'
-const LOGIN_INTENT_STORAGE_KEY = 'revelox-login-intent'
+const LOGIN_INTENT_STORAGE_KEY = 'prealvio-login-intent'
+const LEGACY_LOGIN_INTENT_STORAGE_KEY = 'revelox-login-intent'
+const AUTH_TOKEN_STORAGE_KEY = 'prealvio-auth-token'
+const LEGACY_AUTH_TOKEN_STORAGE_KEY = 'revelox-auth-token'
+const PROFILE_ID_STORAGE_KEY = 'prealvio-profile-id'
+const LEGACY_PROFILE_ID_STORAGE_KEY = 'revelox-profile-id'
 const COOKIE_SESSION = 'cookie-session'
 const xnoCreatorStoreUrl =
   import.meta.env.VITE_XNO_CREATOR_STORE_URL?.trim() ?? ''
@@ -124,7 +129,9 @@ type PlatformFeePaymentIntent = PaymentIntent & {
 
 const getStoredLoginIntent = () => {
   try {
-    const value = localStorage.getItem(LOGIN_INTENT_STORAGE_KEY)
+    const value =
+      localStorage.getItem(LOGIN_INTENT_STORAGE_KEY) ??
+      localStorage.getItem(LEGACY_LOGIN_INTENT_STORAGE_KEY)
     return value ? (JSON.parse(value) as PaymentIntent) : null
   } catch {
     return null
@@ -146,6 +153,12 @@ const getQuestionDraftStorageKey = (
   profileId: string,
   question: Pick<Question, 'id' | 'key' | 'prompt'>,
 ) =>
+  `prealvio-draft:${profileId}:${question.id}:${question.key ?? question.prompt}`
+
+const getLegacyQuestionDraftStorageKey = (
+  profileId: string,
+  question: Pick<Question, 'id' | 'key' | 'prompt'>,
+) =>
   `revelox-draft:${profileId}:${question.id}:${question.key ?? question.prompt}`
 
 const hasDraftContent = (question: Question) =>
@@ -162,6 +175,7 @@ const saveQuestionDraft = (profileId: string, question: Question) => {
 
   if (!hasDraftContent(question)) {
     localStorage.removeItem(key)
+    localStorage.removeItem(getLegacyQuestionDraftStorageKey(profileId, question))
     return
   }
 
@@ -182,6 +196,7 @@ const clearQuestionDraft = (
 ) => {
   if (!profileId) return
   localStorage.removeItem(getQuestionDraftStorageKey(profileId, question))
+  localStorage.removeItem(getLegacyQuestionDraftStorageKey(profileId, question))
 }
 
 const applyStoredDrafts = (questions: Question[], profileId: string) => {
@@ -191,7 +206,7 @@ const applyStoredDrafts = (questions: Question[], profileId: string) => {
     try {
       const value = localStorage.getItem(
         getQuestionDraftStorageKey(profileId, question),
-      )
+      ) ?? localStorage.getItem(getLegacyQuestionDraftStorageKey(profileId, question))
 
       if (!value) return question
 
@@ -553,7 +568,7 @@ function Brand() {
       <span className="brand-mark">
         <img src="/favicon.png" alt="" aria-hidden="true" />
       </span>
-      <span className="brand-name">Revelox</span>
+      <span className="brand-name">Prealvio</span>
     </div>
   )
 }
@@ -591,7 +606,7 @@ function TopMenu({
         Menú
         <ChevronDown size={15} />
       </summary>
-      <nav className="top-menu-panel" aria-label="Opciones de Revelox">
+      <nav className="top-menu-panel" aria-label="Opciones de Prealvio">
         <a
           href="/"
           target={createProfileInNewTab ? '_blank' : undefined}
@@ -647,7 +662,7 @@ function ConsentDialog({
       >
         <h2 id="consent-dialog-title">Antes de continuar</h2>
         <p>
-          Para usar Revelox debes estar de acuerdo con su guía, políticas y
+          Para usar Prealvio debes estar de acuerdo con su guía, políticas y
           términos. Puedes revisarlos en la{' '}
           <a href={getGuideHref()} target="_blank" rel="noreferrer">
             guía de uso
@@ -722,15 +737,15 @@ function GuidePage() {
           <h1>Guía</h1>
           <p>
             Indicaciones, política de uso y términos básicos para publicar o
-            revelar contenido en Revelox.
+            revelar contenido en Prealvio.
           </p>
         </div>
 
         <article className="guide-section">
-          <h2>Comisión de Revelox</h2>
+          <h2>Comisión de Prealvio</h2>
           <p>
             Quien publica recibe directamente en su wallet el precio definido
-            para cada revelación. Revelox cobra una comisión del 10% sobre esos
+            para cada revelación. Prealvio cobra una comisión del 10% sobre esos
             ingresos recibidos por el redactor.
           </p>
           <p>
@@ -741,9 +756,9 @@ function GuidePage() {
         </article>
 
         <article className="guide-section">
-          <h2>Sobre Revelox</h2>
+          <h2>Sobre Prealvio</h2>
           <p>
-            Revelox ayuda a conocer mejor a una persona antes de construir un
+            Prealvio ayuda a conocer mejor a una persona antes de construir un
             vínculo importante. Cada perfil se forma con tarjetas sobre partes
             de su identidad, y cada tarjeta contiene una redacción escrita por
             su titular.
@@ -758,7 +773,7 @@ function GuidePage() {
         <article className="guide-section">
           <h2>Cómo responder</h2>
           <p>
-            Cada tarjeta contiene un tema predefinido por Revelox. Elige las
+            Cada tarjeta contiene un tema predefinido por Prealvio. Elige las
             tarjetas que quieras completar y escribe una redacción personal con
             tus opiniones, recuerdos, experiencias, emociones o confesiones.
           </p>
@@ -776,7 +791,7 @@ function GuidePage() {
             habilita tu sesión en el navegador y dispositivo donde lo realizas.
           </p>
           <p>
-            La cookie de sesión queda configurada por 365 días. Además, Revelox
+            La cookie de sesión queda configurada por 365 días. Además, Prealvio
             conserva el token en el navegador para recuperar la sesión mientras
             no cierres sesión, no cambies de móvil o navegador, ni borres los
             datos del sitio.
@@ -791,7 +806,7 @@ function GuidePage() {
             archivos internos de almacenamiento.
           </p>
           <p>
-            Revelox descifra una redacción solo cuando el titular abre su sesión
+            Prealvio descifra una redacción solo cuando el titular abre su sesión
             o cuando una persona completa el pago requerido para revelar esa
             tarjeta. La protección depende de mantener segura la clave de
             cifrado del servidor.
@@ -801,7 +816,7 @@ function GuidePage() {
         <article className="guide-section">
           <h2>Política de uso responsable</h2>
           <ul>
-            <li>Revelox está en fase experimental.</li>
+            <li>Prealvio está en fase experimental.</li>
             <li>No publiques datos privados de terceros sin consentimiento.</li>
             <li>No publiques amenazas, extorsión, difamación ni contenido ilegal.</li>
             <li>No uses la app para acosar, presionar, suplantar o dañar a otras personas.</li>
@@ -812,7 +827,7 @@ function GuidePage() {
         <article className="guide-section">
           <h2>Privacidad</h2>
           <p>
-            Revelox guarda la información necesaria para crear perfiles,
+            Prealvio guarda la información necesaria para crear perfiles,
             mantener sesiones, validar pagos, mostrar revelaciones y atender
             solicitudes de soporte. Esto puede incluir tu wallet Nano, textos
             publicados, precios definidos, identificadores de pago, token de
@@ -836,7 +851,7 @@ function GuidePage() {
             conservarla.
           </p>
           <p>
-            Quien crea el perfil define el precio de cada redacción. Revelox no
+            Quien crea el perfil define el precio de cada redacción. Prealvio no
             garantiza que una revelación cumpla una expectativa específica ni
             reemplaza acuerdos personales entre usuarios.
           </p>
@@ -853,13 +868,13 @@ function GuidePage() {
           <h2>Reembolsos</h2>
           <p>
             Los pagos en Nano son transferencias directas en la red y no pueden
-            revertirse desde Revelox. Antes de pagar, revisa el monto, la wallet
+            revertirse desde Prealvio. Antes de pagar, revisa el monto, la wallet
             destino y la tarjeta que quieres revelar.
           </p>
           <p>
             Si ocurre un error técnico verificable, escribe a soporte con el
             enlace del perfil, hora aproximada, monto, wallet usada y hash de
-            pago si lo tienes. Revelox revisará el caso, pero no garantiza
+            pago si lo tienes. Prealvio revisará el caso, pero no garantiza
             reembolsos por expectativas sobre el contenido revelado.
           </p>
         </article>
@@ -869,9 +884,9 @@ function GuidePage() {
           <ul>
             <li>Publica solo contenido propio y voluntario.</li>
             <li>No publiques documentos, direcciones, teléfonos, claves, datos financieros ni información privada de terceros.</li>
-            <li>No uses Revelox para amenazas, acoso, extorsión, suplantación, difamación o presión emocional.</li>
+            <li>No uses Prealvio para amenazas, acoso, extorsión, suplantación, difamación o presión emocional.</li>
             <li>No publiques contenido sexual de terceros, menores de edad, violencia explícita ni material ilegal.</li>
-            <li>Revelox puede eliminar contenido o limitar acceso si detecta abuso, riesgo legal o uso contrario a estas reglas.</li>
+            <li>Prealvio puede eliminar contenido o limitar acceso si detecta abuso, riesgo legal o uso contrario a estas reglas.</li>
           </ul>
         </article>
 
@@ -885,7 +900,7 @@ function GuidePage() {
           </p>
           <p>
             Para contactar soporte, usa el formulario de soporte desde el menú
-            de Revelox. Incluye un contacto de respuesta, el enlace relacionado
+            de Prealvio. Incluye un contacto de respuesta, el enlace relacionado
             y una descripción concreta del problema.
           </p>
         </article>
@@ -893,7 +908,7 @@ function GuidePage() {
         <article className="guide-section">
           <h2>Términos básicos</h2>
           <ul>
-            <li>Al usar Revelox aceptas estas indicaciones, políticas y términos.</li>
+            <li>Al usar Prealvio aceptas estas indicaciones, políticas y términos.</li>
             <li>Eres responsable por el contenido que publicas y por cómo usas lo revelado.</li>
             <li>Los pagos de login, revelación y comisión se realizan en XNO y dependen de la red Nano y de la verificación disponible.</li>
             <li>El identificador de sesión muestra los últimos 7 caracteres de tu wallet Nano para que reconozcas tu sesión sin exponer la dirección completa.</li>
@@ -1293,7 +1308,10 @@ function CreatorPage() {
   const [questions, setQuestions] = useState(initialQuestions)
   const privateProfileRef = useRef<PrivateProfile | null>(null)
   const [authToken, setAuthToken] = useState(
-    () => localStorage.getItem('revelox-auth-token') ?? '',
+    () =>
+      localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) ??
+      localStorage.getItem(LEGACY_AUTH_TOKEN_STORAGE_KEY) ??
+      '',
   )
   const [loginIntent, setLoginIntent] = useState<PaymentIntent | null>(
     getStoredLoginIntent,
@@ -1318,7 +1336,10 @@ function CreatorPage() {
   const [publishQuestionId, setPublishQuestionId] = useState<number | null>(null)
   const [ownerAddress, setOwnerAddress] = useState('')
   const [profileId, setProfileId] = useState(
-    () => localStorage.getItem('revelox-profile-id') ?? '',
+    () =>
+      localStorage.getItem(PROFILE_ID_STORAGE_KEY) ??
+      localStorage.getItem(LEGACY_PROFILE_ID_STORAGE_KEY) ??
+      '',
   )
   const [copied, setCopied] = useState(false)
   const [copiedQuestionId, setCopiedQuestionId] = useState<number | null>(null)
@@ -1333,7 +1354,10 @@ function CreatorPage() {
   useEffect(() => {
     apiRequest<{ questions: QuestionDefinition[] }>('/api/questions')
       .then(({ questions: definitions }) => {
-        const storedProfileId = localStorage.getItem('revelox-profile-id') ?? ''
+        const storedProfileId =
+          localStorage.getItem(PROFILE_ID_STORAGE_KEY) ??
+          localStorage.getItem(LEGACY_PROFILE_ID_STORAGE_KEY) ??
+          ''
         setQuestions((current) => {
           const profile = privateProfileRef.current
           const mergedQuestions = mergeQuestions(definitions, current)
@@ -1357,15 +1381,18 @@ function CreatorPage() {
         setOwnerAddress(profile.ownerAddress)
         setProfileId(profile.id)
         setPlatformFeeBalance(profile.platformFee ?? null)
-        localStorage.setItem('revelox-profile-id', profile.id)
+        localStorage.setItem(PROFILE_ID_STORAGE_KEY, profile.id)
+        localStorage.removeItem(LEGACY_PROFILE_ID_STORAGE_KEY)
         setQuestions((current) =>
           applyStoredDrafts(applyProfileAnswers(current, profile), profile.id),
         )
       })
       .catch(() => {
         privateProfileRef.current = null
-        localStorage.removeItem('revelox-auth-token')
-        localStorage.removeItem('revelox-profile-id')
+        localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
+        localStorage.removeItem(PROFILE_ID_STORAGE_KEY)
+        localStorage.removeItem(LEGACY_AUTH_TOKEN_STORAGE_KEY)
+        localStorage.removeItem(LEGACY_PROFILE_ID_STORAGE_KEY)
         setAuthToken('')
         setOwnerAddress('')
         setProfileId('')
@@ -1451,9 +1478,12 @@ function CreatorPage() {
 
         if (!active) return
 
-        localStorage.setItem('revelox-auth-token', data.token)
-        localStorage.setItem('revelox-profile-id', data.profileId)
+        localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, data.token)
+        localStorage.setItem(PROFILE_ID_STORAGE_KEY, data.profileId)
+        localStorage.removeItem(LEGACY_AUTH_TOKEN_STORAGE_KEY)
+        localStorage.removeItem(LEGACY_PROFILE_ID_STORAGE_KEY)
         localStorage.removeItem(LOGIN_INTENT_STORAGE_KEY)
+        localStorage.removeItem(LEGACY_LOGIN_INTENT_STORAGE_KEY)
         setAuthToken(data.token)
         setOwnerAddress(data.ownerAddress)
         setProfileId(data.profileId)
@@ -1582,8 +1612,10 @@ function CreatorPage() {
         body: '{}',
       })
     } finally {
-      localStorage.removeItem('revelox-auth-token')
-      localStorage.removeItem('revelox-profile-id')
+      localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY)
+      localStorage.removeItem(PROFILE_ID_STORAGE_KEY)
+      localStorage.removeItem(LEGACY_AUTH_TOKEN_STORAGE_KEY)
+      localStorage.removeItem(LEGACY_PROFILE_ID_STORAGE_KEY)
       localStorage.removeItem(LOGIN_INTENT_STORAGE_KEY)
       privateProfileRef.current = null
       setAuthToken('')
@@ -1637,7 +1669,8 @@ function CreatorPage() {
       )
       setProfileId(profile.id)
       setPlatformFeeBalance(profile.platformFee ?? null)
-      localStorage.setItem('revelox-profile-id', profile.id)
+      localStorage.setItem(PROFILE_ID_STORAGE_KEY, profile.id)
+      localStorage.removeItem(LEGACY_PROFILE_ID_STORAGE_KEY)
       const persistedQuestion = questions.find((item) => item.id === questionId)
       const savedAnswer = profile.answers.find(
         (answer) => answer.id === questionId,
@@ -1728,7 +1761,7 @@ function CreatorPage() {
             </h2>
             <p>
               Corresponde al {platformFeeBalance.percent}% de tus ingresos
-              pendientes de liquidar en Revelox. Ingresos pendientes de
+              pendientes de liquidar en Prealvio. Ingresos pendientes de
               liquidar comisión: {platformFeeBalance.incomeXno} XNO.
             </p>
           </div>

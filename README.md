@@ -1,8 +1,8 @@
-# Revelox
+# Prealvio
 
-## ¿Qué es Revelox?
+## ¿Qué es Prealvio?
 
-Revelox es una plataforma diseñada para ayudar a las personas a conocerse antes de establecer vínculos importantes.
+Prealvio es una plataforma diseñada para ayudar a las personas a conocerse antes de establecer vínculos importantes.
 
 Cada usuario construye un perfil mediante tarjetas. Cada tarjeta representa una dimensión específica de su identidad y contiene una redacción escrita por el propio titular.
 
@@ -18,13 +18,13 @@ Las personas solemos construir relaciones importantes con información limitada.
 
 Una amistad, una relación de pareja, una sociedad, una contratación o una colaboración suelen comenzar con conversaciones superficiales y una imagen incompleta de la otra persona.
 
-Revelox nace para reducir esa incertidumbre.
+Prealvio nace para reducir esa incertidumbre.
 
 Permite que cada persona revele voluntariamente quién es, cómo piensa, qué siente, qué ha vivido, cuáles son sus valores, sus aspiraciones y las personas que han marcado su vida.
 
 Así, cualquier visitante puede descubrir progresivamente su identidad antes de decidir si desea establecer un vínculo más profundo.
 
-Revelox no pretende sustituir la experiencia de conocer a alguien.
+Prealvio no pretende sustituir la experiencia de conocer a alguien.
 
 Pretende hacer que ese proceso sea más consciente, transparente e informado.
 
@@ -67,7 +67,7 @@ Toda nueva tarjeta deberá cumplir las siguientes condiciones:
 * Ayudar a construir una imagen más completa del titular.
 * Mantener relevancia con el paso del tiempo.
 
-Si no cumple todas estas condiciones, no debe formar parte de Revelox.
+Si no cumple todas estas condiciones, no debe formar parte de Prealvio.
 
 ---
 
@@ -81,7 +81,7 @@ La calidad siempre tendrá prioridad sobre la cantidad.
 
 # Visión
 
-Revelox aspira a convertirse en el mapa de identidad humana más completo del mundo.
+Prealvio aspira a convertirse en el mapa de identidad humana más completo del mundo.
 
 No pretende medir popularidad.
 
@@ -96,7 +96,7 @@ Pretende ayudar a las personas a conocerse mejor antes de decidir construir rela
 Desde el servidor:
 
 ```bash
-cd /root/revelox
+cd /root/prealvio
 npm run deploy:vps
 ```
 
@@ -105,5 +105,5 @@ El script descarga la última versión de GitHub, instala dependencias, compila 
 Variables opcionales:
 
 ```bash
-APP_DIR=/root/revelox WEB_DIR=/var/www/revelox BRANCH=main SERVICE_NAME=revelox-api npm run deploy:vps
+APP_DIR=/root/prealvio WEB_DIR=/var/www/prealvio BRANCH=main SERVICE_NAME=prealvio-api npm run deploy:vps
 ```

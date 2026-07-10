@@ -3,10 +3,13 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'node:
 const encryptedPrefix = 'enc:v1:'
 
 const getEncryptionKey = () => {
-  const secret = process.env.REVELOX_CONTENT_ENCRYPTION_KEY?.trim()
+  const secret = (
+    process.env.PREALVIO_CONTENT_ENCRYPTION_KEY ??
+    process.env.REVELOX_CONTENT_ENCRYPTION_KEY
+  )?.trim()
 
   if (!secret) {
-    throw new Error('REVELOX_CONTENT_ENCRYPTION_KEY no está configurada')
+    throw new Error('PREALVIO_CONTENT_ENCRYPTION_KEY no está configurada')
   }
 
   const decoded = Buffer.from(secret, 'base64')

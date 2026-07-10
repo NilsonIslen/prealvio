@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_DIR="${APP_DIR:-/root/revelox}"
-WEB_DIR="${WEB_DIR:-/var/www/revelox}"
+APP_DIR="${APP_DIR:-/root/prealvio}"
+WEB_DIR="${WEB_DIR:-/var/www/prealvio}"
 BRANCH="${BRANCH:-main}"
-SERVICE_NAME="${SERVICE_NAME:-revelox-api}"
+SERVICE_NAME="${SERVICE_NAME:-prealvio-api}"
 
 echo "→ Entrando a ${APP_DIR}"
 cd "$APP_DIR"

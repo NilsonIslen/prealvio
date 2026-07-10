@@ -8,7 +8,10 @@ import { decryptAnswer, encryptAnswer } from './answer-crypto.mjs'
 import { getQuestion, questions } from './questions.mjs'
 import { createId, createToken, mutateStore, readStore } from './store.mjs'
 
-const port = Number(process.env.REVELOX_API_PORT ?? 8788)
+const envValue = (name, legacyName, fallback) =>
+  process.env[name] ?? process.env[legacyName] ?? fallback
+
+const port = Number(envValue('PREALVIO_API_PORT', 'REVELOX_API_PORT', 8788))
 const loginAmountNano = '0.1'
 const loginReceiverAddress =
   process.env.LOGIN_RECEIVER_NANO_ADDRESS ??
@@ -18,16 +21,16 @@ const platformFeeMinimumRaw = BigInt(nanoToRaw('0.1'))
 const platformFeeQuantumRaw = BigInt(nanoToRaw('0.000001'))
 const paymentIntentTtlMs = 15 * 60 * 1000
 const paymentCheckIntervalMs = 12 * 1000
-const maxRequestBodyBytes = Number(process.env.REVELOX_MAX_BODY_BYTES ?? 256 * 1024)
-const rateLimitWindowMs = Number(process.env.REVELOX_RATE_LIMIT_WINDOW_MS ?? 60 * 1000)
-const rateLimitDefaultMax = Number(process.env.REVELOX_RATE_LIMIT_DEFAULT_MAX ?? 180)
-const rateLimitWriteMax = Number(process.env.REVELOX_RATE_LIMIT_WRITE_MAX ?? 60)
-const rateLimitPaymentMax = Number(process.env.REVELOX_RATE_LIMIT_PAYMENT_MAX ?? 30)
+const maxRequestBodyBytes = Number(envValue('PREALVIO_MAX_BODY_BYTES', 'REVELOX_MAX_BODY_BYTES', 256 * 1024))
+const rateLimitWindowMs = Number(envValue('PREALVIO_RATE_LIMIT_WINDOW_MS', 'REVELOX_RATE_LIMIT_WINDOW_MS', 60 * 1000))
+const rateLimitDefaultMax = Number(envValue('PREALVIO_RATE_LIMIT_DEFAULT_MAX', 'REVELOX_RATE_LIMIT_DEFAULT_MAX', 180))
+const rateLimitWriteMax = Number(envValue('PREALVIO_RATE_LIMIT_WRITE_MAX', 'REVELOX_RATE_LIMIT_WRITE_MAX', 60))
+const rateLimitPaymentMax = Number(envValue('PREALVIO_RATE_LIMIT_PAYMENT_MAX', 'REVELOX_RATE_LIMIT_PAYMENT_MAX', 30))
 const paymentChecks = new Map()
 const rateLimitBuckets = new Map()
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const supportLogPath =
-  process.env.REVELOX_SUPPORT_LOG_PATH ?? join(__dirname, 'data', 'support-messages.txt')
+  envValue('PREALVIO_SUPPORT_LOG_PATH', 'REVELOX_SUPPORT_LOG_PATH', join(__dirname, 'data', 'support-messages.txt'))
 
 const sendJson = (response, status, data, headers = {}) => {
   response.writeHead(status, {
@@ -145,10 +148,15 @@ const getBearerToken = (request) => {
 const getCookieToken = (request) => {
   const cookies = String(request.headers.cookie ?? '').split(';')
   const sessionCookie = cookies.find((cookie) =>
+    cookie.trim().startsWith('prealvio_session=') ||
     cookie.trim().startsWith('revelox_session='),
   )
+  const cookieName = sessionCookie?.trim().startsWith('prealvio_session=')
+    ? 'prealvio_session='
+    : 'revelox_session='
+
   return sessionCookie
-    ? decodeURIComponent(sessionCookie.trim().slice('revelox_session='.length))
+    ? decodeURIComponent(sessionCookie.trim().slice(cookieName.length))
     : ''
 }
 
@@ -163,7 +171,7 @@ const getSession = (request, store) => {
 }
 
 const sessionCookie = (token) =>
-  `revelox_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`
+  `prealvio_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`
 
 const normalizeNanoAmount = (value) => {
   const normalized = String(value).trim()
@@ -777,8 +785,10 @@ const server = createServer(async (request, response) => {
     }
 
     sendJson(response, 200, { ok: true }, {
-      'Set-Cookie':
+      'Set-Cookie': [
+        'prealvio_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
         'revelox_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
+      ],
     })
     return
   }
@@ -1245,5 +1255,5 @@ const server = createServer(async (request, response) => {
 })
 
 server.listen(port, () => {
-  console.log(`Revelox API activa en http://localhost:${port}`)
+  console.log(`Prealvio API activa en http://localhost:${port}`)
 })
