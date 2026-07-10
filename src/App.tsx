@@ -14,6 +14,7 @@ import {
   UserRound,
   Wallet,
 } from 'lucide-react'
+import { QRCodeSVG } from 'qrcode.react'
 import './App.css'
 
 const LOGIN_AMOUNT_LABEL = '0,1'
@@ -389,8 +390,11 @@ const xnoToRaw = (value: string) => {
   return (BigInt(whole || '0') * 10n ** 30n + BigInt(normalizedFraction)).toString()
 }
 
+const getNanoPaymentUri = (receiver: string, amount: string) =>
+  `nano:${receiver}?amount=${xnoToRaw(amount)}`
+
 const openNanoPayment = (receiver: string, amount: string) => {
-  window.location.href = `nano:${receiver}?amount=${xnoToRaw(amount)}`
+  window.location.href = getNanoPaymentUri(receiver, amount)
 }
 
 const copyText = async (value: string) => {
@@ -427,6 +431,64 @@ const apiRequest = async <T,>(
   }
 
   return data
+}
+
+function PaymentOptionsPanel({
+  intent,
+  title,
+  description,
+  onRetry,
+}: {
+  intent: PaymentIntent
+  title: string
+  description: string
+  onRetry: () => void
+}) {
+  const paymentUri = getNanoPaymentUri(intent.receiverAddress, intent.amountNano)
+
+  return (
+    <div className="waiting-payment-panel">
+      <div className="waiting-payment" role="status" aria-live="polite">
+        <LoaderCircle className="spin" size={22} />
+        <div>
+          <strong>{title}</strong>
+          <span>{description}</span>
+        </div>
+      </div>
+
+      <div className="payment-options" aria-label="Opciones de pago Nano">
+        <div className="payment-option">
+          <span>Pagar desde este dispositivo</span>
+          <button
+            className="primary-action"
+            type="button"
+            onClick={() => openNanoPayment(intent.receiverAddress, intent.amountNano)}
+          >
+            <Wallet size={18} />
+            Pagar con app Nano
+          </button>
+        </div>
+
+        <div className="payment-option qr-payment-option">
+          <span>Escanear desde otro dispositivo</span>
+          <div className="payment-qr" aria-label="QR de pago Nano">
+            <QRCodeSVG value={paymentUri} size={168} marginSize={2} />
+          </div>
+        </div>
+      </div>
+
+      <div className="payment-details">
+        <span>Monto exacto</span>
+        <strong>{intent.amountNano} XNO</strong>
+        <span>Wallet destino</span>
+        <strong>{intent.receiverAddress}</strong>
+      </div>
+
+      <button className="secondary-action" type="button" onClick={onRetry}>
+        Intentar pago de nuevo
+      </button>
+    </div>
+  )
 }
 
 const formatQuestionText = (text: string): QuestionTextContent => {
@@ -978,7 +1040,6 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
       setPaymentIntent(intent)
       setPendingAnswerId(answerId)
       setRequestState({ loading: false, error: '' })
-      openNanoPayment(intent.receiverAddress, intent.amountNano)
     } catch (error) {
       setRequestState({
         loading: false,
@@ -1158,23 +1219,13 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
                 </>
               )}
 
-              {!revealedAnswer && isPending && (
-                <div className="waiting-payment-panel">
-                  <div className="waiting-payment" role="status" aria-live="polite">
-                    <LoaderCircle className="spin" size={22} />
-                    <div>
-                      <strong>Validando pago</strong>
-                      <span>Validando pago.</span>
-                    </div>
-                  </div>
-                  <button
-                    className="secondary-action"
-                    type="button"
-                    onClick={retryUnlockPayment}
-                  >
-                    Intentar pago de nuevo
-                  </button>
-                </div>
+              {!revealedAnswer && isPending && paymentIntent && (
+                <PaymentOptionsPanel
+                  intent={paymentIntent}
+                  title="Validando pago"
+                  description="Paga con tu app Nano o escanea el QR desde otro dispositivo."
+                  onRetry={retryUnlockPayment}
+                />
               )}
 
               {!revealedAnswer && requestState.error && !isPending && (
@@ -1321,7 +1372,6 @@ function CreatorPage() {
       setLoginIntent(intent)
       localStorage.setItem(LOGIN_INTENT_STORAGE_KEY, JSON.stringify(intent))
       setAuthState({ loading: false, error: '' })
-      openNanoPayment(intent.receiverAddress, intent.amountNano)
     } catch (error) {
       setAuthState({
         loading: false,
@@ -1406,7 +1456,6 @@ function CreatorPage() {
       setPlatformFeeIntent(intent)
       setPlatformFeeBalance(intent.balance)
       setPlatformFeeState({ loading: false, error: '' })
-      openNanoPayment(intent.receiverAddress, intent.amountNano)
     } catch (error) {
       setPlatformFeeState({
         loading: false,
@@ -1636,25 +1685,12 @@ function CreatorPage() {
           </div>
 
           {platformFeeIntent ? (
-            <div className="waiting-payment-panel">
-              <div className="waiting-payment" role="status" aria-live="polite">
-                <LoaderCircle className="spin" size={22} />
-                <div>
-                  <strong>Validando pago de comisión</strong>
-                  <span>
-                    Paga exactamente {platformFeeIntent.amountNano} XNO a la
-                    wallet de Revelox.
-                  </span>
-                </div>
-              </div>
-              <button
-                className="secondary-action"
-                type="button"
-                onClick={retryPlatformFeePayment}
-              >
-                Intentar pago de nuevo
-              </button>
-            </div>
+            <PaymentOptionsPanel
+              intent={platformFeeIntent}
+              title="Validando pago de comisión"
+              description="Paga con tu app Nano o escanea el QR desde otro dispositivo."
+              onRetry={retryPlatformFeePayment}
+            />
           ) : (
             <button
               className="primary-action"
@@ -1715,22 +1751,12 @@ function CreatorPage() {
           )}
 
           {!isLoggedIn && loginIntent && (
-            <div className="waiting-payment-panel">
-              <div className="waiting-payment" role="status" aria-live="polite">
-                <LoaderCircle className="spin" size={22} />
-                <div>
-                  <strong>Esperando confirmar el pago</strong>
-                  <span>Puede tardar unos segundos.</span>
-                </div>
-              </div>
-              <button
-                className="secondary-action"
-                type="button"
-                onClick={retryLoginPayment}
-              >
-                Intentar pago de nuevo
-              </button>
-            </div>
+            <PaymentOptionsPanel
+              intent={loginIntent}
+              title="Esperando confirmar el pago"
+              description="Paga con tu app Nano o escanea el QR desde otro dispositivo."
+              onRetry={retryLoginPayment}
+            />
           )}
 
           {!isLoggedIn && authState.error && (
