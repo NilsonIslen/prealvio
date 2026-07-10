@@ -736,8 +736,7 @@ function GuidePage() {
           <p>
             Cuando tengas comisión pendiente, aparecerá un aviso en la parte
             superior de tu página principal con el saldo a cancelar y un botón
-            de pago. Para evitar cobros demasiado pequeños o conflictos por
-            montos mínimos, el aviso se muestra desde 0,01 XNO pendientes.
+            de pago. El cobro se genera desde 0,1 XNO pendientes.
           </p>
         </article>
 

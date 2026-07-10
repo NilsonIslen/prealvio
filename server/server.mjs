@@ -14,7 +14,7 @@ const loginReceiverAddress =
   process.env.LOGIN_RECEIVER_NANO_ADDRESS ??
   'nano_19o77pnp71wufuic4txepeumhtt6imouy71ekwi7165suax43dxeu3t4ro5q'
 const platformFeePercent = 10
-const platformFeeMinimumRaw = BigInt(nanoToRaw('0.01'))
+const platformFeeMinimumRaw = BigInt(nanoToRaw('0.1'))
 const platformFeeQuantumRaw = BigInt(nanoToRaw('0.000001'))
 const paymentIntentTtlMs = 15 * 60 * 1000
 const paymentCheckIntervalMs = 12 * 1000
