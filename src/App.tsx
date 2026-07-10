@@ -810,6 +810,24 @@ function GuidePage() {
         </article>
 
         <article className="guide-section">
+          <h2>Privacidad</h2>
+          <p>
+            Revelox guarda la información necesaria para crear perfiles,
+            mantener sesiones, validar pagos, mostrar revelaciones y atender
+            solicitudes de soporte. Esto puede incluir tu wallet Nano, textos
+            publicados, precios definidos, identificadores de pago, token de
+            sesión, fecha de uso, enlace del perfil y mensajes enviados a
+            soporte.
+          </p>
+          <p>
+            Las redacciones privadas se almacenan cifradas. Aun así, evita
+            publicar datos sensibles propios o de terceros que no quieras
+            exponer bajo ninguna circunstancia. Quien paga una revelación puede
+            leerla y copiarla.
+          </p>
+        </article>
+
+        <article className="guide-section">
           <h2>Revelaciones y pagos</h2>
           <p>
             Las revelaciones se desbloquean mediante pagos en XNO. La respuesta
@@ -831,6 +849,32 @@ function GuidePage() {
           </p>
         </article>
 
+        <article className="guide-section">
+          <h2>Reembolsos</h2>
+          <p>
+            Los pagos en Nano son transferencias directas en la red y no pueden
+            revertirse desde Revelox. Antes de pagar, revisa el monto, la wallet
+            destino y la tarjeta que quieres revelar.
+          </p>
+          <p>
+            Si ocurre un error técnico verificable, escribe a soporte con el
+            enlace del perfil, hora aproximada, monto, wallet usada y hash de
+            pago si lo tienes. Revelox revisará el caso, pero no garantiza
+            reembolsos por expectativas sobre el contenido revelado.
+          </p>
+        </article>
+
+        <article className="guide-section">
+          <h2>Reglas de contenido</h2>
+          <ul>
+            <li>Publica solo contenido propio y voluntario.</li>
+            <li>No publiques documentos, direcciones, teléfonos, claves, datos financieros ni información privada de terceros.</li>
+            <li>No uses Revelox para amenazas, acoso, extorsión, suplantación, difamación o presión emocional.</li>
+            <li>No publiques contenido sexual de terceros, menores de edad, violencia explícita ni material ilegal.</li>
+            <li>Revelox puede eliminar contenido o limitar acceso si detecta abuso, riesgo legal o uso contrario a estas reglas.</li>
+          </ul>
+        </article>
+
         <article className="guide-section" id="soporte">
           <h2>Soporte</h2>
           <p>
@@ -839,6 +883,11 @@ function GuidePage() {
             aproximada y enlace del perfil para poder revisar el caso con más
             claridad.
           </p>
+          <p>
+            Para contactar soporte, usa el formulario de soporte desde el menú
+            de Revelox. Incluye un contacto de respuesta, el enlace relacionado
+            y una descripción concreta del problema.
+          </p>
         </article>
 
         <article className="guide-section">
@@ -846,6 +895,7 @@ function GuidePage() {
           <ul>
             <li>Al usar Revelox aceptas estas indicaciones, políticas y términos.</li>
             <li>Eres responsable por el contenido que publicas y por cómo usas lo revelado.</li>
+            <li>Los pagos de login, revelación y comisión se realizan en XNO y dependen de la red Nano y de la verificación disponible.</li>
             <li>El identificador de sesión muestra los últimos 7 caracteres de tu wallet Nano para que reconozcas tu sesión sin exponer la dirección completa.</li>
             <li>El acceso, los pagos y las sesiones pueden depender del navegador y del estado de la red.</li>
             <li>La app puede cambiar mientras siga en desarrollo experimental.</li>
