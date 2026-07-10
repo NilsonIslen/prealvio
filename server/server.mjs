@@ -180,7 +180,7 @@ const normalizeNanoAmount = (value) => {
 const getProfileId = (ownerAddress) =>
   createHash('sha256').update(ownerAddress).digest('hex').slice(0, 32)
 
-const getOwnerIdentifier = (ownerAddress) => ownerAddress.slice(-8)
+const getOwnerIdentifier = (ownerAddress) => ownerAddress.slice(-7)
 
 const findProfileByReference = (store, reference) => {
   const normalizedReference = String(reference ?? '').trim()

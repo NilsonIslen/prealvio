@@ -382,7 +382,7 @@ const hasQuestionContent = (question: Question) =>
       })
     : Boolean(question.answer.trim())
 
-const getSessionIdentifier = (address: string) => address.slice(-8)
+const getSessionIdentifier = (address: string) => address.slice(-7)
 
 const xnoToRaw = (value: string) => {
   const [whole = '0', fraction = ''] = value.trim().split('.')
@@ -825,7 +825,7 @@ function GuidePage() {
           </p>
           <p>
             Antes de revelar una tarjeta, el perfil no permite identificar por
-            sí mismo a la persona titular. Puedes reconocerlo por los últimos 8
+            sí mismo a la persona titular. Puedes reconocerlo por los últimos 7
             caracteres de su wallet Nano o porque esa persona compartió
             directamente el enlace contigo. Los enlaces públicos pueden usar
             ese identificador corto para ser más fáciles de compartir.
@@ -847,7 +847,7 @@ function GuidePage() {
           <ul>
             <li>Al usar Revelox aceptas estas indicaciones, políticas y términos.</li>
             <li>Eres responsable por el contenido que publicas y por cómo usas lo revelado.</li>
-            <li>El identificador de sesión muestra los últimos 8 caracteres de tu wallet Nano para que reconozcas tu sesión sin exponer la dirección completa.</li>
+            <li>El identificador de sesión muestra los últimos 7 caracteres de tu wallet Nano para que reconozcas tu sesión sin exponer la dirección completa.</li>
             <li>El acceso, los pagos y las sesiones pueden depender del navegador y del estado de la red.</li>
             <li>La app puede cambiar mientras siga en desarrollo experimental.</li>
           </ul>
@@ -1767,6 +1767,11 @@ function CreatorPage() {
             <div className="active-session-details">
               <div className="session-detail">
                 <span>Enlace</span>
+                {shareUrl && (
+                  <a className="profile-share-url" href={shareUrl}>
+                    {shareUrl}
+                  </a>
+                )}
                 <p>
                   Comparte este perfil: tus respuestas estarán ocultas y cada
                   persona podrá desbloquearlas pagando el precio que definiste.
