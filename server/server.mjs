@@ -170,8 +170,19 @@ const getSession = (request, store) => {
   )
 }
 
-const sessionCookie = (token) =>
-  `prealvio_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000`
+const isSecureRequest = (request) =>
+  request.headers['x-forwarded-proto'] === 'https' ||
+  request.socket.encrypted
+
+const cookieSecurity = (request) => (isSecureRequest(request) ? '; Secure' : '')
+
+const sessionCookie = (request, token) =>
+  `prealvio_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${cookieSecurity(request)}`
+
+const expiredSessionCookies = (request) => [
+  `prealvio_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${cookieSecurity(request)}`,
+  `revelox_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${cookieSecurity(request)}`,
+]
 
 const normalizeNanoAmount = (value) => {
   const normalized = String(value).trim()
@@ -675,7 +686,7 @@ const server = createServer(async (request, response) => {
           profileId: getProfileId(recoveredLogin.ownerAddress),
           paymentHash: recoveredLogin.paymentHash,
         }, {
-          'Set-Cookie': sessionCookie(recoveredLogin.token),
+          'Set-Cookie': sessionCookie(request, recoveredLogin.token),
         })
         return
       }
@@ -692,7 +703,7 @@ const server = createServer(async (request, response) => {
           profileId: getProfileId(completedIntent.ownerAddress),
           paymentHash: completedIntent.paymentHash,
         }, {
-          'Set-Cookie': sessionCookie(completedIntent.sessionToken),
+          'Set-Cookie': sessionCookie(request, completedIntent.sessionToken),
         })
         return
       }
@@ -762,7 +773,7 @@ const server = createServer(async (request, response) => {
         profileId: getProfileId(payment.senderWallet),
         paymentHash: payment.hash,
       }, {
-        'Set-Cookie': sessionCookie(token),
+        'Set-Cookie': sessionCookie(request, token),
       })
     } catch (error) {
       sendJson(response, 422, {
@@ -785,10 +796,7 @@ const server = createServer(async (request, response) => {
     }
 
     sendJson(response, 200, { ok: true }, {
-      'Set-Cookie': [
-        'prealvio_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
-        'revelox_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0',
-      ],
+      'Set-Cookie': expiredSessionCookies(request),
     })
     return
   }
