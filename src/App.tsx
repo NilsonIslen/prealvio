@@ -1255,7 +1255,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
                 <div className="hidden-answer hidden-preview">
                   <div className="hidden-preview-heading">
                     <EyeOff size={18} />
-                    <p>Oculta</p>
+                    <p>Redacción personal oculta</p>
                   </div>
                   <div className="reveal-card-metrics" aria-label="Detalles de la redacción">
                     <span>{formatCount(item.wordCount, 'palabra', 'palabras')}</span>

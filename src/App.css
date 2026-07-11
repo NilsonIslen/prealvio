@@ -1316,14 +1316,14 @@ h2 {
 .reveal-card-metrics span {
   min-width: 0;
   padding: 10px;
-  border: 1px solid rgba(56, 82, 87, 0.12);
+  border: 1px solid rgba(123, 36, 56, 0.12);
   border-radius: 8px;
-  color: #385257;
+  color: #7b4a54;
   font-size: 0.78rem;
   font-weight: 850;
   line-height: 1.2;
   text-align: center;
-  background: #f1f7f5;
+  background: rgba(255, 247, 248, 0.78);
 }
 
 .hidden-answer {
