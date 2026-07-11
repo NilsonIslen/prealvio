@@ -1062,11 +1062,12 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
     error: '',
   })
   const { consentDialog, requestConsent } = useConsentGate()
+  const profileReference = encodeURIComponent(profileId)
 
   useEffect(() => {
     let active = true
     const loadProfile = () =>
-      apiRequest<PublicProfile>(`/api/profiles/${profileId}`)
+      apiRequest<PublicProfile>(`/api/profiles/${profileReference}`)
         .then((nextProfile) => {
           if (!active) return
           setProfile(nextProfile)
@@ -1094,14 +1095,14 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
       active = false
       window.clearInterval(interval)
     }
-  }, [profileId])
+  }, [profileReference])
 
   const beginUnlock = async (answerId: number) => {
     setRequestState({ loading: true, error: '' })
 
     try {
       const intent = await apiRequest<PaymentIntent>(
-        `/api/profiles/${profileId}/answers/${answerId}/unlock/start`,
+        `/api/profiles/${profileReference}/answers/${answerId}/unlock/start`,
         { method: 'POST', body: '{}' },
       )
 
@@ -1128,7 +1129,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
 
       try {
         const data = await apiRequest<{ answer: string }>(
-          `/api/profiles/${profileId}/answers/${pendingAnswerId}/unlock`,
+          `/api/profiles/${profileReference}/answers/${pendingAnswerId}/unlock`,
           {
             method: 'POST',
             body: JSON.stringify({
@@ -1172,7 +1173,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
       active = false
       window.clearInterval(interval)
     }
-  }, [paymentIntent, pendingAnswerId, profileId, profile])
+  }, [paymentIntent, pendingAnswerId, profileReference, profile])
 
   const retryUnlockPayment = () => {
     setPendingAnswerId(null)

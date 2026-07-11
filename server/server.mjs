@@ -1150,7 +1150,7 @@ const server = createServer(async (request, response) => {
     return
   }
 
-  const profileMatch = url.pathname.match(/^\/api\/profiles\/([a-z0-9]+)$/i)
+  const profileMatch = url.pathname.match(/^\/api\/profiles\/([A-Za-z0-9_-]+)$/)
 
   if (request.method === 'GET' && profileMatch) {
     const store = await readStore()
@@ -1171,11 +1171,11 @@ const server = createServer(async (request, response) => {
   }
 
   const unlockMatch = url.pathname.match(
-    /^\/api\/profiles\/([a-z0-9]+)\/answers\/(\d+)\/unlock$/i,
+    /^\/api\/profiles\/([A-Za-z0-9_-]+)\/answers\/(\d+)\/unlock$/,
   )
 
   const unlockStartMatch = url.pathname.match(
-    /^\/api\/profiles\/([a-z0-9]+)\/answers\/(\d+)\/unlock\/start$/i,
+    /^\/api\/profiles\/([A-Za-z0-9_-]+)\/answers\/(\d+)\/unlock\/start$/,
   )
 
   if (request.method === 'POST' && unlockStartMatch) {
