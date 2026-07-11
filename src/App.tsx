@@ -1235,6 +1235,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
         {profile.answers.map((item, index) => {
           const revealedAnswer = revealedAnswers[getAnswerAccessKey(item)]
           const isPending = pendingAnswerId === item.id
+          const questionContent = formatQuestionText(item.prompt)
 
           return (
             <article className="reveal-card" key={item.id}>
@@ -1242,17 +1243,32 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
                 <span className="value-label">Redacción privada</span>
                 <span className="price-badge">{item.price} XNO</span>
               </div>
-              <QuestionText index={index} text={item.prompt} titleAs="h2" />
+
+              <div className="public-card-title-row">
+                <div className="question-title-row">
+                  <span className="question-number">{index + 1}</span>
+                  <h2 className="fixed-question">{questionContent.title}</h2>
+                </div>
+
+                {!revealedAnswer && (
+                  <div className="hidden-answer compact">
+                    <EyeOff size={18} />
+                    <p>Oculta</p>
+                  </div>
+                )}
+              </div>
 
               <div className="reveal-card-metrics" aria-label="Detalles de la redacción">
                 <span>{formatCount(item.wordCount, 'palabra', 'palabras')}</span>
                 <span>{formatCount(item.letterCount, 'letra', 'letras')}</span>
               </div>
 
-              <div className={revealedAnswer ? 'hidden-answer revealed' : 'hidden-answer'}>
-                {revealedAnswer ? <Eye size={22} /> : <EyeOff size={22} />}
-                <p>{revealedAnswer || 'Oculta'}</p>
-              </div>
+              {revealedAnswer && (
+                <div className="hidden-answer revealed">
+                  <Eye size={22} />
+                  <p>{revealedAnswer}</p>
+                </div>
+              )}
 
               {revealedAnswer && (
                 <button
