@@ -77,6 +77,7 @@
   font-size: 0.9rem;
   font-weight: 800;
   background: rgba(255, 255, 255, 0.82);
+  overflow-wrap: anywhere;
 }
 
 .session-pill.verified {
@@ -1258,8 +1259,8 @@ h2 {
 .reveal-card {
   display: grid;
   align-content: start;
-  gap: 16px;
-  padding: clamp(20px, 4vw, 30px);
+  gap: 12px;
+  padding: clamp(16px, 3vw, 22px);
   border: 1px solid rgba(32, 43, 48, 0.12);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.92);
@@ -1293,13 +1294,13 @@ h2 {
 
 .reveal-card .fixed-question {
   color: #351f28;
-  font-size: clamp(1.42rem, 2.8vw, 1.95rem);
-  line-height: 1.08;
+  font-size: clamp(1.22rem, 2.2vw, 1.62rem);
+  line-height: 1.12;
 }
 
 .reveal-card-metrics {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -1317,12 +1318,11 @@ h2 {
 }
 
 .hidden-answer {
-  display: grid;
-  min-height: 170px;
-  place-items: center;
-  align-content: center;
-  gap: 10px;
-  padding: 24px;
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
   border: 1px solid rgba(123, 36, 56, 0.16);
   border-radius: 8px;
   color: #7b4a54;
@@ -1333,13 +1333,20 @@ h2 {
 }
 
 .hidden-answer p {
+  min-width: 0;
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.94rem;
   font-weight: 800;
-  text-align: center;
+  line-height: 1.25;
 }
 
 .hidden-answer.revealed {
+  display: grid;
+  min-height: 170px;
+  place-items: center;
+  align-content: center;
+  gap: 10px;
+  padding: 24px;
   color: var(--heading);
   background: #f0f8f4;
   text-align: left;
@@ -1432,10 +1439,6 @@ h2 {
 
   .header-link {
     width: 100%;
-  }
-
-  .reveal-card-metrics {
-    grid-template-columns: 1fr;
   }
 
   .subtle-header-link {

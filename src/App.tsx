@@ -401,8 +401,6 @@ const hasQuestionContent = (question: Question) =>
       })
     : Boolean(question.answer.trim())
 
-const getSessionIdentifier = (address: string) => address.slice(-7)
-
 const xnoToRaw = (value: string) => {
   const [whole = '0', fraction = ''] = value.trim().split('.')
   const normalizedFraction = fraction.slice(0, 30).padEnd(30, '0')
@@ -1249,7 +1247,6 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
               <div className="reveal-card-metrics" aria-label="Detalles de la redacción">
                 <span>{formatCount(item.wordCount, 'palabra', 'palabras')}</span>
                 <span>{formatCount(item.letterCount, 'letra', 'letras')}</span>
-                <span>{item.price} XNO para revelar</span>
               </div>
 
               <div className={revealedAnswer ? 'hidden-answer revealed' : 'hidden-answer'}>
@@ -1346,7 +1343,6 @@ function CreatorPage() {
   })
   const [savingQuestionId, setSavingQuestionId] = useState<number | null>(null)
   const [publishQuestionId, setPublishQuestionId] = useState<number | null>(null)
-  const [ownerAddress, setOwnerAddress] = useState('')
   const [profileId, setProfileId] = useState(
     () =>
       localStorage.getItem(PROFILE_ID_STORAGE_KEY) ??
@@ -1358,7 +1354,6 @@ function CreatorPage() {
   const { consentDialog, requestConsent } = useConsentGate()
 
   const isLoggedIn = Boolean(authToken)
-  const sessionIdentifier = getSessionIdentifier(ownerAddress)
   const shareUrl = profileId
     ? `${window.location.origin}${window.location.pathname}?p=${profileId}`
     : ''
@@ -1389,7 +1384,6 @@ function CreatorPage() {
       .then((profile) => {
         privateProfileRef.current = profile
         if (!authToken) setAuthToken(COOKIE_SESSION)
-        setOwnerAddress(profile.ownerAddress)
         setProfileId(profile.id)
         setPlatformFeeBalance(profile.platformFee ?? null)
         localStorage.setItem(PROFILE_ID_STORAGE_KEY, profile.id)
@@ -1405,7 +1399,6 @@ function CreatorPage() {
         localStorage.removeItem(LEGACY_AUTH_TOKEN_STORAGE_KEY)
         localStorage.removeItem(LEGACY_PROFILE_ID_STORAGE_KEY)
         setAuthToken('')
-        setOwnerAddress('')
         setProfileId('')
         setPlatformFeeBalance(null)
       })
@@ -1496,7 +1489,6 @@ function CreatorPage() {
         localStorage.removeItem(LOGIN_INTENT_STORAGE_KEY)
         localStorage.removeItem(LEGACY_LOGIN_INTENT_STORAGE_KEY)
         setAuthToken(data.token)
-        setOwnerAddress(data.ownerAddress)
         setProfileId(data.profileId)
         setLoginIntent(null)
         setAuthState({ loading: false, error: '' })
@@ -1630,7 +1622,6 @@ function CreatorPage() {
       localStorage.removeItem(LOGIN_INTENT_STORAGE_KEY)
       privateProfileRef.current = null
       setAuthToken('')
-      setOwnerAddress('')
       setProfileId('')
       setLoginIntent(null)
       setPlatformFeeIntent(null)
@@ -1750,8 +1741,7 @@ function CreatorPage() {
           <TopMenu onLogout={isLoggedIn ? logout : undefined} />
           {isLoggedIn ? (
             <span className="session-pill verified">
-              <UserRound size={16} />
-              Sesión activa
+              {profileId || 'Sesión activa'}
             </span>
           ) : (
             <span className="session-pill">
@@ -1808,16 +1798,14 @@ function CreatorPage() {
 
       <section className="creator-intro">
         <aside className="login-card" aria-label="Inicio de sesión Nano">
-          <div className="login-heading">
-            <UserRound size={22} />
-            <div>
-              <h2>
-                {isLoggedIn && sessionIdentifier
-                  ? `Sesión activa · ${sessionIdentifier}`
-                  : 'Login Nano'}
-              </h2>
+          {!isLoggedIn && (
+            <div className="login-heading">
+              <UserRound size={22} />
+              <div>
+                <h2>Login Nano</h2>
+              </div>
             </div>
-          </div>
+          )}
 
           {!isLoggedIn && !loginIntent && (
             <>
