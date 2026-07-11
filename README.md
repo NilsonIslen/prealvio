@@ -93,11 +93,23 @@ Pretende ayudar a las personas a conocerse mejor antes de decidir construir rela
 
 # Despliegue en VPS
 
+Servidor actual:
+
+```bash
+ssh root@167.71.17.126
+```
+
 Desde el servidor:
 
 ```bash
 cd /root/prealvio
 npm run deploy:vps
+```
+
+Desde esta máquina:
+
+```bash
+ssh root@167.71.17.126 'cd /root/prealvio && npm run deploy:vps'
 ```
 
 El script descarga la última versión de GitHub, instala dependencias, compila la web, publica `dist` en Nginx y reinicia la API.
