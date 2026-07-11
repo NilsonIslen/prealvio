@@ -1249,19 +1249,20 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
                   <span className="question-number">{index + 1}</span>
                   <h2 className="fixed-question">{questionContent.title}</h2>
                 </div>
+              </div>
 
-                {!revealedAnswer && (
-                  <div className="hidden-answer compact">
+              {!revealedAnswer && (
+                <div className="hidden-answer hidden-preview">
+                  <div className="hidden-preview-heading">
                     <EyeOff size={18} />
                     <p>Oculta</p>
                   </div>
-                )}
-              </div>
-
-              <div className="reveal-card-metrics" aria-label="Detalles de la redacción">
-                <span>{formatCount(item.wordCount, 'palabra', 'palabras')}</span>
-                <span>{formatCount(item.letterCount, 'letra', 'letras')}</span>
-              </div>
+                  <div className="reveal-card-metrics" aria-label="Detalles de la redacción">
+                    <span>{formatCount(item.wordCount, 'palabra', 'palabras')}</span>
+                    <span>{formatCount(item.letterCount, 'letra', 'letras')}</span>
+                  </div>
+                </div>
+              )}
 
               {revealedAnswer && (
                 <div className="hidden-answer revealed">
