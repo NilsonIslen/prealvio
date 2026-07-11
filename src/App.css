@@ -1186,6 +1186,21 @@ h2 {
   line-height: 1.5;
 }
 
+.profile-hero .profile-public-id {
+  display: inline-flex;
+  max-width: min(100%, 420px);
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border: 1px solid rgba(216, 67, 100, 0.18);
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+  color: #7b2438;
+  background: rgba(255, 255, 255, 0.74);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 0;
+}
+
 .public-profile-actions {
   display: grid;
   width: min(100%, 620px);
@@ -1242,12 +1257,13 @@ h2 {
 
 .reveal-card {
   display: grid;
-  gap: 18px;
+  align-content: start;
+  gap: 16px;
   padding: clamp(20px, 4vw, 30px);
-  border: 1px solid rgba(32, 43, 48, 0.1);
-  border-radius: 18px;
+  border: 1px solid rgba(32, 43, 48, 0.12);
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 24px 70px rgba(42, 54, 58, 0.1);
+  box-shadow: 0 20px 56px rgba(42, 54, 58, 0.11);
 }
 
 .reveal-card-heading {
@@ -1257,10 +1273,18 @@ h2 {
   gap: 12px;
 }
 
+.value-label {
+  color: #385257;
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .price-badge {
   margin-left: auto;
   padding: 6px 10px;
-  border-radius: 999px;
+  border-radius: 8px;
   color: #7b2438;
   font-size: 0.84rem;
   font-weight: 900;
@@ -1268,22 +1292,44 @@ h2 {
 }
 
 .reveal-card .fixed-question {
-  font-size: clamp(1.28rem, 2.6vw, 1.75rem);
+  color: #351f28;
+  font-size: clamp(1.42rem, 2.8vw, 1.95rem);
+  line-height: 1.08;
+}
+
+.reveal-card-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.reveal-card-metrics span {
+  min-width: 0;
+  padding: 10px;
+  border: 1px solid rgba(56, 82, 87, 0.12);
+  border-radius: 8px;
+  color: #385257;
+  font-size: 0.78rem;
+  font-weight: 850;
+  line-height: 1.2;
+  text-align: center;
+  background: #f1f7f5;
 }
 
 .hidden-answer {
   display: grid;
-  min-height: 150px;
+  min-height: 170px;
   place-items: center;
   align-content: center;
   gap: 10px;
   padding: 24px;
-  border: 1px solid rgba(32, 43, 48, 0.1);
-  border-radius: 14px;
+  border: 1px solid rgba(123, 36, 56, 0.16);
+  border-radius: 8px;
   color: #7b4a54;
   background:
-    linear-gradient(rgba(255, 247, 248, 0.88), rgba(255, 247, 248, 0.88)),
-    repeating-linear-gradient(135deg, #ffdce4 0 8px, #fff2f5 8px 16px);
+    linear-gradient(rgba(255, 247, 248, 0.9), rgba(255, 247, 248, 0.9)),
+    repeating-linear-gradient(135deg, #ffdce4 0 9px, #fff2f5 9px 18px);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.75);
 }
 
 .hidden-answer p {
@@ -1296,6 +1342,7 @@ h2 {
 .hidden-answer.revealed {
   color: var(--heading);
   background: #f0f8f4;
+  text-align: left;
 }
 
 .hidden-answer.revealed p {
@@ -1385,6 +1432,10 @@ h2 {
 
   .header-link {
     width: 100%;
+  }
+
+  .reveal-card-metrics {
+    grid-template-columns: 1fr;
   }
 
   .subtle-header-link {

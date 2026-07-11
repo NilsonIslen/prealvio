@@ -71,13 +71,14 @@ type QuestionDefinition = {
 
 type PublicProfile = {
   id: string
-  ownerIdentifier: string
   createdAt: string
   answers: Array<{
     id: number
     questionKey: string
     prompt: string
     price: string
+    wordCount: number
+    letterCount: number
   }>
 }
 
@@ -148,6 +149,9 @@ const getAnswerAccessKey = (answer: {
   questionKey?: string
   prompt?: string
 }) => `${answer.id}:${answer.questionKey ?? answer.prompt ?? ''}`
+
+const formatCount = (count: number, singular: string, plural: string) =>
+  `${count.toLocaleString('es-CO')} ${count === 1 ? singular : plural}`
 
 const getQuestionDraftStorageKey = (
   profileId: string,
@@ -1219,7 +1223,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
         <div className="profile-avatar">
           <img src="/favicon.png" alt="" aria-hidden="true" />
         </div>
-        <p>Titular · {profile.ownerIdentifier}</p>
+        <p className="profile-public-id">{profile.id}</p>
       </section>
 
       <section className="public-profile-grid">
@@ -1236,9 +1240,16 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
           return (
             <article className="reveal-card" key={item.id}>
               <div className="reveal-card-heading">
+                <span className="value-label">Redacción privada</span>
                 <span className="price-badge">{item.price} XNO</span>
               </div>
               <QuestionText index={index} text={item.prompt} titleAs="h2" />
+
+              <div className="reveal-card-metrics" aria-label="Detalles de la redacción">
+                <span>{formatCount(item.wordCount, 'palabra', 'palabras')}</span>
+                <span>{formatCount(item.letterCount, 'letra', 'letras')}</span>
+                <span>{item.price} XNO para revelar</span>
+              </div>
 
               <div className={revealedAnswer ? 'hidden-answer revealed' : 'hidden-answer'}>
                 {revealedAnswer ? <Eye size={22} /> : <EyeOff size={22} />}
@@ -1347,9 +1358,8 @@ function CreatorPage() {
 
   const isLoggedIn = Boolean(authToken)
   const sessionIdentifier = getSessionIdentifier(ownerAddress)
-  const profileShareIdentifier = sessionIdentifier || profileId
-  const shareUrl = profileShareIdentifier
-    ? `${window.location.origin}${window.location.pathname}?profile=${profileShareIdentifier}`
+  const shareUrl = profileId
+    ? `${window.location.origin}${window.location.pathname}?p=${profileId}`
     : ''
   useEffect(() => {
     apiRequest<{ questions: QuestionDefinition[] }>('/api/questions')
@@ -2139,7 +2149,8 @@ function CreatorPage() {
 }
 
 function App() {
-  const profileId = new URLSearchParams(window.location.search).get('profile')
+  const searchParams = new URLSearchParams(window.location.search)
+  const profileId = searchParams.get('p') ?? searchParams.get('profile')
   const path = window.location.pathname.replace(/\/+$/, '') || '/'
   if (path === '/guia') return <GuidePage />
   if (path === '/soporte') return <SupportPage />

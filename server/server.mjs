@@ -1,5 +1,5 @@
 import { createServer } from 'node:http'
-import { createHash } from 'node:crypto'
+import { createHash, randomBytes } from 'node:crypto'
 import { appendFile, mkdir } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -196,10 +196,37 @@ const normalizeNanoAmount = (value) => {
   return cleanFraction ? `${BigInt(whole)}.${cleanFraction}` : BigInt(whole).toString()
 }
 
-const getProfileId = (ownerAddress) =>
+const getLegacyProfileId = (ownerAddress) =>
   createHash('sha256').update(ownerAddress).digest('hex').slice(0, 32)
 
 const getOwnerIdentifier = (ownerAddress) => ownerAddress.slice(-7)
+
+const createProfileId = () => `p_${randomBytes(9).toString('base64url')}`
+
+const createUniqueProfileId = (store) => {
+  let profileId = createProfileId()
+  while (store.profiles.some((item) => item.id === profileId)) {
+    profileId = createProfileId()
+  }
+  return profileId
+}
+
+const ensureProfileId = (store, profile) => {
+  if (profile.id && /^p_[A-Za-z0-9_-]{10,12}$/.test(profile.id)) {
+    return profile.id
+  }
+
+  profile.id = createUniqueProfileId(store)
+  return profile.id
+}
+
+const findProfileByOwner = (store, ownerAddress) =>
+  store.profiles.find((profile) => profile.ownerAddress === ownerAddress)
+
+const getProfileIdForOwner = (store, ownerAddress) => {
+  const profile = findProfileByOwner(store, ownerAddress)
+  return profile?.id ?? getLegacyProfileId(ownerAddress)
+}
 
 const findProfileByReference = (store, reference) => {
   const normalizedReference = String(reference ?? '').trim()
@@ -208,6 +235,12 @@ const findProfileByReference = (store, reference) => {
   )
 
   if (profileById) return { profile: profileById, ambiguous: false }
+
+  const legacyProfileById = store.profiles.find(
+    (profile) => getLegacyProfileId(profile.ownerAddress) === normalizedReference,
+  )
+
+  if (legacyProfileById) return { profile: legacyProfileById, ambiguous: false }
 
   const matchingProfiles = store.profiles.filter(
     (profile) => getOwnerIdentifier(profile.ownerAddress) === normalizedReference,
@@ -224,6 +257,8 @@ const getQuestionKey = (question) => question?.key ?? question?.prompt
 const countWords = (value) => String(value ?? '').trim().split(/\s+/).filter(Boolean).length
 
 const countCharacters = (value) => String(value ?? '').trim().length
+
+const countLetters = (value) => String(value ?? '').match(/\p{L}/gu)?.length ?? 0
 
 const getStoredFieldValue = (answerText, field, fields = []) => {
   const prefix = `${field.label}:`
@@ -265,10 +300,10 @@ const isCurrentAnswer = (question, item) => {
 
 const getPublicProfile = (profile) => ({
   id: profile.id,
-  ownerIdentifier: getOwnerIdentifier(profile.ownerAddress),
   createdAt: profile.createdAt,
   answers: profile.answers.flatMap((item) => {
     const question = getQuestion(item.id)
+    const answer = decryptAnswer(item.answer)
 
     return isCurrentAnswer(question, item)
       ? [{
@@ -276,6 +311,8 @@ const getPublicProfile = (profile) => ({
           questionKey: getQuestionKey(question),
           prompt: question.prompt,
           price: item.price,
+          wordCount: countWords(answer),
+          letterCount: countLetters(answer),
         }]
       : []
   }),
@@ -667,23 +704,26 @@ const server = createServer(async (request, response) => {
         recoverCompletedLogin(currentStore, completedIntent)
 
       if (completedIntent && recoveredLogin) {
-        await mutateStore((store) => {
+        const profileId = await mutateStore((store) => {
           const intent = store.paymentIntents.find(
             (item) => item.id === completedIntent.id,
           )
+          const profile = findProfileByOwner(store, recoveredLogin.ownerAddress)
 
           if (intent) {
             intent.sessionToken = recoveredLogin.token
             intent.ownerAddress = recoveredLogin.ownerAddress
             intent.paymentHash = recoveredLogin.paymentHash
           }
+          if (profile) ensureProfileId(store, profile)
+          return getProfileIdForOwner(store, recoveredLogin.ownerAddress)
         })
 
         sendJson(response, 200, {
           message: 'Pago confirmado',
           token: recoveredLogin.token,
           ownerAddress: recoveredLogin.ownerAddress,
-          profileId: getProfileId(recoveredLogin.ownerAddress),
+          profileId,
           paymentHash: recoveredLogin.paymentHash,
         }, {
           'Set-Cookie': sessionCookie(request, recoveredLogin.token),
@@ -696,11 +736,17 @@ const server = createServer(async (request, response) => {
         completedIntent?.ownerAddress &&
         completedIntent?.paymentHash
       ) {
+        const profileId = await mutateStore((store) => {
+          const profile = findProfileByOwner(store, completedIntent.ownerAddress)
+          if (profile) ensureProfileId(store, profile)
+          return getProfileIdForOwner(store, completedIntent.ownerAddress)
+        })
+
         sendJson(response, 200, {
           message: 'Pago confirmado',
           token: completedIntent.sessionToken,
           ownerAddress: completedIntent.ownerAddress,
-          profileId: getProfileId(completedIntent.ownerAddress),
+          profileId,
           paymentHash: completedIntent.paymentHash,
         }, {
           'Set-Cookie': sessionCookie(request, completedIntent.sessionToken),
@@ -724,7 +770,7 @@ const server = createServer(async (request, response) => {
       )
       const token = createToken()
 
-      await mutateStore((store) => {
+      const profileId = await mutateStore((store) => {
         if (store.usedPayments.some((item) => item.hash === payment.hash)) {
           throw new Error('Este pago ya fue utilizado')
         }
@@ -739,16 +785,15 @@ const server = createServer(async (request, response) => {
           ownerAddress: payment.senderWallet,
           createdAt: new Date().toISOString(),
         })
-        const profileId = getProfileId(payment.senderWallet)
         const existingProfile = store.profiles.find(
           (profile) => profile.ownerAddress === payment.senderWallet,
         )
 
         if (existingProfile) {
-          existingProfile.id = profileId
+          ensureProfileId(store, existingProfile)
         } else {
           store.profiles.push({
-            id: profileId,
+            id: createUniqueProfileId(store),
             ownerAddress: payment.senderWallet,
             answers: [],
             createdAt: new Date().toISOString(),
@@ -764,13 +809,14 @@ const server = createServer(async (request, response) => {
           currentIntent.ownerAddress = payment.senderWallet
           currentIntent.paymentHash = payment.hash
         }
+        return getProfileIdForOwner(store, payment.senderWallet)
       })
 
       sendJson(response, 200, {
         message: 'Pago confirmado',
         token,
         ownerAddress: payment.senderWallet,
-        profileId: getProfileId(payment.senderWallet),
+        profileId,
         paymentHash: payment.hash,
       }, {
         'Set-Cookie': sessionCookie(request, token),
@@ -978,7 +1024,17 @@ const server = createServer(async (request, response) => {
       return
     }
 
-    sendJson(response, 200, getPrivateProfile(profile, store))
+    if (/^p_[A-Za-z0-9_-]{10,12}$/.test(profile.id)) {
+      sendJson(response, 200, getPrivateProfile(profile, store))
+    } else {
+      const migratedProfile = await mutateStore((current) => {
+        const existingProfile = findProfileByOwner(current, session.ownerAddress)
+        if (!existingProfile) throw new Error('Perfil no encontrado')
+        ensureProfileId(current, existingProfile)
+        return getPrivateProfile(existingProfile, current)
+      })
+      sendJson(response, 200, migratedProfile)
+    }
     return
   }
 
@@ -1037,6 +1093,7 @@ const server = createServer(async (request, response) => {
           throw new Error('Perfil no encontrado')
         }
 
+        ensureProfileId(current, existingProfile)
         existingProfile.answers = existingProfile.answers.filter(
           (item) => item.id !== questionId,
         )
@@ -1077,7 +1134,7 @@ const server = createServer(async (request, response) => {
           throw new Error('Perfil no encontrado')
         }
 
-        existingProfile.id = getProfileId(session.ownerAddress)
+        ensureProfileId(current, existingProfile)
         existingProfile.answers = answers
         existingProfile.updatedAt = new Date().toISOString()
         return getPrivateProfile(existingProfile, current)
