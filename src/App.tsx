@@ -1755,7 +1755,6 @@ function CreatorPage() {
       <header className="topbar creator-topbar">
         <Brand />
         <div className="topbar-actions">
-          <TopMenu onLogout={isLoggedIn ? logout : undefined} />
           {isLoggedIn ? (
             <span className="session-pill verified">
               {profileId || 'Sesión activa'}
@@ -1766,6 +1765,7 @@ function CreatorPage() {
               Solo lectura
             </span>
           )}
+          <TopMenu onLogout={isLoggedIn ? logout : undefined} />
         </div>
       </header>
 

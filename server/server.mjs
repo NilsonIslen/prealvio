@@ -1,6 +1,6 @@
 import { createServer } from 'node:http'
 import { createHash, randomBytes } from 'node:crypto'
-import { appendFile, mkdir } from 'node:fs/promises'
+import { appendFile, mkdir, readFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { findIncomingPayment, formatRawAsNano, nanoToRaw } from './nano-rpc.mjs'
@@ -31,6 +31,29 @@ const rateLimitBuckets = new Map()
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const supportLogPath =
   envValue('PREALVIO_SUPPORT_LOG_PATH', 'REVELOX_SUPPORT_LOG_PATH', join(__dirname, 'data', 'support-messages.txt'))
+const webDir = envValue('PREALVIO_WEB_DIR', 'REVELOX_WEB_DIR', join(__dirname, '..', 'dist'))
+const sharePreviewPhrases = [
+  'Quizás conoces la versión de muchos sobre mí. Tú tienes la tuya, pero ¿te interesa conocer la mía?',
+  'No es lo mismo observarme de afuera hacia adentro que conocerme de adentro hacia afuera.',
+  'Si conoces mi perfil de Prealvio, quizá me conozcas más que muchos de mis amigos.',
+  'Conóceme por lo que decido revelar, no solo por lo que puedas imaginar.',
+  'Pocos conocen de mí lo que tú puedes descubrir aquí.',
+  'Mi mejor presentación no es una fotografía, sino aquello que estoy dispuesto a revelar.',
+  'Desnudar el cuerpo toma un momento; desnudar la mente puede tardar años.',
+  'Tal vez aquí encuentres una razón para acercarte... o una buena razón para no hacerlo.',
+  'Quizá no sea para todo el mundo. Aquí puedes descubrir si soy para ti.',
+  'Hay partes de mí que no están ocultas; simplemente pocos han llegado hasta ellas.',
+  'Con cada tarjeta de Prealvio estás un paso más cerca de conocerme.',
+  'Una primera impresión muestra la superficie; Prealvio te permite mirar más adentro.',
+  'Prealvio no elimina el misterio: te permite descubrirlo poco a poco.',
+  'Conocer a alguien comienza cuando dejamos de imaginarlo y empezamos a escucharlo.',
+  'Prealvio convierte suposiciones en revelaciones.',
+  'Lo que normalmente tardarías meses en descubrir puede comenzar aquí.',
+  'Descubre nuestras coincidencias y diferencias antes de crear expectativas.',
+  'Hay conversaciones que resultan más fáciles después de pasar por Prealvio.',
+  'Prealvio no busca convencerte de que te acerques, sino darte razones para decidirlo.',
+  'Pocos llegan a conocer lo que una persona piensa cuando decide revelarse; Prealvio te permite acercarte.',
+]
 
 const sendJson = (response, status, data, headers = {}) => {
   response.writeHead(status, {
@@ -39,6 +62,50 @@ const sendJson = (response, status, data, headers = {}) => {
     ...headers,
   })
   response.end(JSON.stringify(data))
+}
+
+const escapeHtml = (value) =>
+  String(value ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+
+const getPublicOrigin = (request) => {
+  const protocol = request.headers['x-forwarded-proto'] ?? 'http'
+  return `${protocol}://${request.headers.host}`
+}
+
+const pickSharePreviewPhrase = () =>
+  sharePreviewPhrases[randomBytes(1)[0] % sharePreviewPhrases.length]
+
+const sendAppHtml = async (request, response, url) => {
+  const description = pickSharePreviewPhrase()
+  const origin = getPublicOrigin(request)
+  const pageUrl = `${origin}${url.pathname}${url.search}`
+  const previewImageUrl = `${origin}/favicon.png`
+  const meta = [
+    '<meta name="description" content="' + escapeHtml(description) + '" />',
+    '<meta property="og:type" content="website" />',
+    '<meta property="og:site_name" content="Prealvio" />',
+    '<meta property="og:title" content="Perfil privado en Prealvio" />',
+    '<meta property="og:description" content="' + escapeHtml(description) + '" />',
+    '<meta property="og:url" content="' + escapeHtml(pageUrl) + '" />',
+    '<meta property="og:image" content="' + escapeHtml(previewImageUrl) + '" />',
+    '<meta name="twitter:card" content="summary" />',
+    '<meta name="twitter:title" content="Perfil privado en Prealvio" />',
+    '<meta name="twitter:description" content="' + escapeHtml(description) + '" />',
+    '<meta name="twitter:image" content="' + escapeHtml(previewImageUrl) + '" />',
+  ].join('\n    ')
+  const html = await readFile(join(webDir, 'index.html'), 'utf8')
+  const body = html.replace('</head>', `    ${meta}\n  </head>`)
+
+  response.writeHead(200, {
+    'Content-Type': 'text/html; charset=utf-8',
+    'Cache-Control': 'no-store',
+  })
+  response.end(body)
 }
 
 const readBody = async (request) => {
@@ -615,6 +682,24 @@ const verifyPaymentIntent = async (
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? '/', `http://${request.headers.host}`)
+
+  if (
+    (request.method === 'GET' || request.method === 'HEAD') &&
+    url.pathname === '/'
+  ) {
+    try {
+      await sendAppHtml(request, response, url)
+    } catch (error) {
+      sendJson(response, 503, {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'No se pudo cargar la aplicación',
+      })
+    }
+    return
+  }
+
   const rateLimit = checkRateLimit(request, url)
 
   if (!rateLimit.allowed) {
