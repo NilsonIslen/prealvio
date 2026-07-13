@@ -872,11 +872,33 @@ const server = createServer(async (request, response) => {
       )
       const fallbackAmountNano =
         competingLoginIntents.length === 0 ? loginAmountNano : undefined
-      const { intent, payment } = await verifyPaymentIntent(
-        intentId,
-        'login',
-        fallbackAmountNano,
-      )
+      let intent
+      let payment
+
+      try {
+        ;({ intent, payment } = await verifyPaymentIntent(
+          intentId,
+          'login',
+          fallbackAmountNano,
+        ))
+      } catch (error) {
+        const message = error instanceof Error ? error.message : ''
+
+        if (!message.includes('venció')) throw error
+
+        intent = currentStore.paymentIntents.find(
+          (item) => item.id === intentId && item.purpose === 'login',
+        )
+        if (!intent) throw error
+
+        payment = await findIncomingPayment({
+          receiverWallet: intent.receiverAddress,
+          amountNano: intent.amountNano,
+          fallbackAmountNano,
+          createdAfter: intent.createdAt,
+          excludedHashes: currentStore.usedPayments.map((item) => item.hash),
+        })
+      }
       const token = createToken()
 
       const profileId = await mutateStore((store) => {
@@ -918,6 +940,7 @@ const server = createServer(async (request, response) => {
           currentIntent.sessionToken = token
           currentIntent.ownerAddress = payment.senderWallet
           currentIntent.paymentHash = payment.hash
+          currentIntent.amountNano = payment.amountNano
         }
         return getProfileIdForOwner(store, payment.senderWallet)
       })
@@ -1417,11 +1440,29 @@ const server = createServer(async (request, response) => {
         return
       }
 
-      const { intent, payment } = await verifyPaymentIntent(
-        intentId,
-        'unlock',
-        answer.price,
-      )
+      let intent
+      let payment
+
+      try {
+        ;({ intent, payment } = await verifyPaymentIntent(
+          intentId,
+          'unlock',
+          answer.price,
+        ))
+      } catch (error) {
+        const message = error instanceof Error ? error.message : ''
+
+        if (!message.includes('venció')) throw error
+
+        intent = pendingIntent
+        payment = await findIncomingPayment({
+          receiverWallet: profile.ownerAddress,
+          amountNano: pendingIntent.amountNano,
+          fallbackAmountNano: answer.price,
+          createdAfter: pendingIntent.createdAt,
+          excludedHashes: store.usedPayments.map((item) => item.hash),
+        })
+      }
 
       if (intent.profileId !== profile.id || intent.answerId !== answer.id) {
         sendJson(response, 400, { error: 'El pago no corresponde a esta respuesta' })
@@ -1447,6 +1488,7 @@ const server = createServer(async (request, response) => {
           currentIntent.status = 'completed'
           currentIntent.paymentHash = payment.hash
           currentIntent.answerQuestionKey = getQuestionKey(question)
+          currentIntent.amountNano = payment.amountNano
         }
       })
 

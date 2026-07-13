@@ -21,6 +21,7 @@ const LOGIN_AMOUNT_LABEL = '0,1'
 const LOGIN_INTENT_STORAGE_KEY = 'prealvio-login-intent'
 const LEGACY_LOGIN_INTENT_STORAGE_KEY = 'revelox-login-intent'
 const PLATFORM_FEE_INTENT_STORAGE_KEY = 'prealvio-platform-fee-intent'
+const UNLOCK_INTENT_STORAGE_PREFIX = 'prealvio-unlock-intent:'
 const AUTH_TOKEN_STORAGE_KEY = 'prealvio-auth-token'
 const LEGACY_AUTH_TOKEN_STORAGE_KEY = 'revelox-auth-token'
 const PROFILE_ID_STORAGE_KEY = 'prealvio-profile-id'
@@ -130,6 +131,11 @@ type PlatformFeePaymentIntent = PaymentIntent & {
   balance: PlatformFeeBalance
 }
 
+type StoredUnlockPaymentIntent = {
+  answerId: number
+  intent: PaymentIntent
+}
+
 const getStoredLoginIntent = () => {
   try {
     const value =
@@ -137,6 +143,26 @@ const getStoredLoginIntent = () => {
       localStorage.getItem(LEGACY_LOGIN_INTENT_STORAGE_KEY)
     return value ? (JSON.parse(value) as PaymentIntent) : null
   } catch {
+    return null
+  }
+}
+
+const getUnlockIntentStorageKey = (profileReference: string) =>
+  `${UNLOCK_INTENT_STORAGE_PREFIX}${profileReference}`
+
+const getStoredUnlockPaymentIntent = (profileReference: string) => {
+  try {
+    const key = getUnlockIntentStorageKey(profileReference)
+    const value = localStorage.getItem(key)
+    const stored = value ? (JSON.parse(value) as StoredUnlockPaymentIntent) : null
+
+    return stored &&
+      Number.isInteger(stored.answerId) &&
+      typeof stored.intent?.intentId === 'string'
+      ? stored
+      : null
+  } catch {
+    localStorage.removeItem(getUnlockIntentStorageKey(profileReference))
     return null
   }
 }
@@ -1067,10 +1093,16 @@ function SupportPage() {
 }
 
 function PublicProfilePage({ profileId }: { profileId: string }) {
+  const profileReference = encodeURIComponent(profileId)
+  const storedUnlockIntent = getStoredUnlockPaymentIntent(profileReference)
   const [profile, setProfile] = useState<PublicProfile | null>(null)
   const [loadError, setLoadError] = useState('')
-  const [pendingAnswerId, setPendingAnswerId] = useState<number | null>(null)
-  const [paymentIntent, setPaymentIntent] = useState<PaymentIntent | null>(null)
+  const [pendingAnswerId, setPendingAnswerId] = useState<number | null>(
+    () => storedUnlockIntent?.answerId ?? null,
+  )
+  const [paymentIntent, setPaymentIntent] = useState<PaymentIntent | null>(
+    () => storedUnlockIntent?.intent ?? null,
+  )
   const [revealedAnswers, setRevealedAnswers] = useState<Record<string, string>>({})
   const [copiedAnswerId, setCopiedAnswerId] = useState<number | null>(null)
   const [requestState, setRequestState] = useState<RequestState>({
@@ -1078,7 +1110,6 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
     error: '',
   })
   const { consentDialog, requestConsent } = useConsentGate()
-  const profileReference = encodeURIComponent(profileId)
 
   useEffect(() => {
     let active = true
@@ -1124,6 +1155,10 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
 
       setPaymentIntent(intent)
       setPendingAnswerId(answerId)
+      localStorage.setItem(
+        getUnlockIntentStorageKey(profileReference),
+        JSON.stringify({ answerId, intent }),
+      )
       setRequestState({ loading: false, error: '' })
     } catch (error) {
       setRequestState({
@@ -1165,6 +1200,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
         }
         setPendingAnswerId(null)
         setPaymentIntent(null)
+        localStorage.removeItem(getUnlockIntentStorageKey(profileReference))
         setRequestState({ loading: false, error: '' })
       } catch (error) {
         if (!active) return
@@ -1172,9 +1208,15 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
         const message =
           error instanceof Error ? error.message : 'Esperando confirmación'
 
-        if (message.includes('venció') || message.includes('utilizado')) {
+        if (
+          message.includes('venció') ||
+          message.includes('utilizado') ||
+          message.includes('inválida') ||
+          message.includes('no encontrada')
+        ) {
           setPendingAnswerId(null)
           setPaymentIntent(null)
+          localStorage.removeItem(getUnlockIntentStorageKey(profileReference))
           setRequestState({ loading: false, error: message })
         }
       } finally {
@@ -1194,6 +1236,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
   const retryUnlockPayment = () => {
     setPendingAnswerId(null)
     setPaymentIntent(null)
+    localStorage.removeItem(getUnlockIntentStorageKey(profileReference))
     setRequestState({ loading: false, error: '' })
   }
 
