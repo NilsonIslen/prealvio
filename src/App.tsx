@@ -669,7 +669,7 @@ function TopMenu({
             if (!xnoCreatorStoreUrl) event.preventDefault()
           }}
         >
-          Comprar XNO al creador (Colombia)
+          Comprar o vender XNO en Nanopaquete
         </a>
         <a href="https://hub.nano.org/trading" target="_blank" rel="noreferrer">
           Comprar XNO a un proveedor global
@@ -2027,7 +2027,7 @@ function CreatorPage() {
                   if (!xnoCreatorStoreUrl) event.preventDefault()
                 }}
               >
-                Comprar XNO al creador (solo Colombia)
+                Comprar o vender XNO en Nanopaquete
               </a>
               <a href="https://hub.nano.org/trading" target="_blank" rel="noreferrer">
                 Comprar o vender XNO con proveedores globales
