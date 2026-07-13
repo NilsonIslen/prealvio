@@ -788,22 +788,6 @@ h2 {
   gap: 12px;
 }
 
-.alias-heading {
-  padding: 2px 0 4px;
-}
-
-.alias-heading h2 {
-  margin: 0 0 3px;
-}
-
-.alias-heading p {
-  margin: 0;
-  color: #7b4a54;
-  font-size: 0.86rem;
-  font-weight: 750;
-  line-height: 1.35;
-}
-
 .session-detail {
   display: grid;
   gap: 5px;

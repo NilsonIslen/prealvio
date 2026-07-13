@@ -1964,13 +1964,6 @@ function CreatorPage() {
 
           {isLoggedIn ? (
             <div className="active-session-details">
-              <div className="login-heading alias-heading">
-                <UserRound size={22} />
-                <div>
-                  <h2>Alias público</h2>
-                  <p>Este es el identificador visible de tu perfil.</p>
-                </div>
-              </div>
               <div className="session-detail alias-detail">
                 <span>Editar alias</span>
                 <div className="alias-editor">
@@ -2005,16 +1998,12 @@ function CreatorPage() {
                 {aliasState.error && <p className="form-error">{aliasState.error}</p>}
               </div>
               <div className="session-detail">
-                <span>Enlace</span>
+                <span>Enlace para compartir</span>
                 {shareUrl && (
                   <a className="profile-share-url" href={shareUrl}>
                     {shareUrl}
                   </a>
                 )}
-                <p>
-                  Comparte este perfil: tus respuestas estarán ocultas y cada
-                  persona podrá desbloquearlas pagando el precio que definiste.
-                </p>
               </div>
               <button
                 className="primary-action"
