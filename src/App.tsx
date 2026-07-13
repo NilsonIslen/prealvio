@@ -1943,10 +1943,6 @@ function CreatorPage() {
                     Guardar alias
                   </button>
                 </div>
-                <p>
-                  Este nombre se muestra en el perfil público. Cambiarlo no
-                  cambia el enlace.
-                </p>
                 {aliasState.error && <p className="form-error">{aliasState.error}</p>}
               </div>
               <div className="session-detail">
