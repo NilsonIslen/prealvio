@@ -1,6 +1,7 @@
 const RAW_PER_NANO = 10n ** 30n
 const RPC_TIMEOUT_MS = Number(process.env.NANO_RPC_TIMEOUT_MS ?? 8000)
 const DEFAULT_NANO_RPC_URL = 'http://127.0.0.1:7076'
+const DEFAULT_PAYMENT_AMOUNT_TOLERANCE_NANO = '0.000001'
 const rpcCooldowns = new Map()
 
 export const normalizeNanoHash = (value) => value.trim().toUpperCase()
@@ -37,6 +38,55 @@ export const formatRawAsNano = (raw) => {
   return `${whole}.${fraction.toString().padStart(30, '0').replace(/0+$/, '')}`
 }
 
+const getPaymentAmountToleranceNano = () =>
+  process.env.NANO_PAYMENT_AMOUNT_TOLERANCE?.trim() ||
+  DEFAULT_PAYMENT_AMOUNT_TOLERANCE_NANO
+
+const getPaymentAmountToleranceRaw = () => {
+  try {
+    return BigInt(nanoToRaw(getPaymentAmountToleranceNano()))
+  } catch {
+    return BigInt(nanoToRaw(DEFAULT_PAYMENT_AMOUNT_TOLERANCE_NANO))
+  }
+}
+
+const getRawDifference = (left, right) => {
+  const leftRaw = BigInt(left)
+  const rightRaw = BigInt(right)
+  return leftRaw > rightRaw ? leftRaw - rightRaw : rightRaw - leftRaw
+}
+
+const getAcceptedAmountMatch = (actualRaw, acceptedRawAmounts) => {
+  if (!/^\d+$/.test(String(actualRaw ?? ''))) return null
+
+  const exactMatch = acceptedRawAmounts.find((item) => item.raw === actualRaw)
+
+  if (exactMatch) {
+    return {
+      ...exactMatch,
+      actualAmountNano: formatRawAsNano(actualRaw),
+      differenceRaw: 0n,
+    }
+  }
+
+  const toleranceRaw = getPaymentAmountToleranceRaw()
+  return acceptedRawAmounts
+    .filter((item) => item.allowTolerance !== false)
+    .map((item) => ({
+      ...item,
+      actualAmountNano: formatRawAsNano(actualRaw),
+      differenceRaw: getRawDifference(actualRaw, item.raw),
+    }))
+    .filter((item) => item.differenceRaw <= toleranceRaw)
+    .sort((left, right) =>
+      left.differenceRaw < right.differenceRaw
+        ? -1
+        : left.differenceRaw > right.differenceRaw
+          ? 1
+          : 0,
+    )[0]
+}
+
 export async function getNanoBlockInfo(hash) {
   const data = await nanoRpc({
     action: 'block_info',
@@ -54,6 +104,7 @@ export async function findPaymentBlock({
   excludedHashes = [],
 }) {
   const expectedRaw = nanoToRaw(amountNano)
+  const acceptedRawAmounts = [{ amountNano, raw: expectedRaw, allowTolerance: true }]
   const excluded = new Set(excludedHashes.map(normalizeNanoHash))
   const data = await nanoRpc(
     {
@@ -73,7 +124,7 @@ export async function findPaymentBlock({
             getBlockType(entry) === 'send' &&
             entry.confirmed === 'true' &&
             entry.account === receiverWallet &&
-            entry.amount === expectedRaw &&
+            getAcceptedAmountMatch(entry.amount, acceptedRawAmounts) &&
             entry.hash &&
             isNanoHash(entry.hash) &&
             !excluded.has(normalizeNanoHash(entry.hash)),
@@ -98,16 +149,19 @@ export async function findPaymentBlock({
       !excluded.has(normalizeNanoHash(entry.hash)),
   )
 
-  const exactPayment = sendsToReceiver.find(
-    (entry) => entry.amount === expectedRaw,
-  )
+  const exactPayment = sendsToReceiver.find((entry) => entry.amount === expectedRaw)
+  const acceptedPayment =
+    exactPayment ??
+    sendsToReceiver.find((entry) =>
+      getAcceptedAmountMatch(entry.amount, acceptedRawAmounts),
+    )
 
-  if (!exactPayment?.hash) {
+  if (!acceptedPayment?.hash) {
     const latestToReceiver = sendsToReceiver.find((entry) => entry.amount)
 
     if (latestToReceiver?.amount) {
       throw new Error(
-        `Encontré un pago al receptor, pero fue de ${formatRawAsNano(latestToReceiver.amount)} XNO. Debe ser exactamente ${amountNano} XNO.`,
+        `Encontré un pago al receptor, pero fue de ${formatRawAsNano(latestToReceiver.amount)} XNO. Debe estar dentro de ${getPaymentAmountToleranceNano()} XNO de ${amountNano} XNO.`,
       )
     }
 
@@ -116,7 +170,7 @@ export async function findPaymentBlock({
     )
   }
 
-  const hash = normalizeNanoHash(exactPayment.hash)
+  const hash = normalizeNanoHash(acceptedPayment.hash)
   const block = await getNanoBlockInfo(hash)
   const issue = getPaymentIssue(block, {
     senderWallet,
@@ -145,6 +199,7 @@ export async function findIncomingPayment({
   const acceptedRawAmounts = acceptedAmounts.map((value) => ({
     amountNano: value,
     raw: nanoToRaw(value),
+    allowTolerance: Boolean(fallbackAmountNano),
   }))
   const excluded = new Set(excludedHashes.map(normalizeNanoHash))
   const isRecentEnough = (entry) => {
@@ -159,12 +214,22 @@ export async function findIncomingPayment({
     acceptedRawAmounts.flatMap(({ amountNano: matchedAmountNano, raw }) => {
       const matches = entries.filter(
         ([hash, entry]) =>
-          entry?.amount === raw &&
+          getAcceptedAmountMatch(entry?.amount, [
+            {
+              amountNano: matchedAmountNano,
+              raw,
+              allowTolerance: Boolean(fallbackAmountNano),
+            },
+          ]) &&
           entry?.source &&
           isNanoHash(hash) &&
           !excluded.has(normalizeNanoHash(hash)),
       )
-      return matches.map((match) => ({ match, matchedAmountNano }))
+      return matches.map((match) => ({
+        match,
+        matchedAmountNano,
+        actualAmountNano: formatRawAsNano(match[1].amount),
+      }))
     })
   const receivable = await nanoRpc(
     {
@@ -198,7 +263,7 @@ export async function findIncomingPayment({
     return {
       hash: normalizedHash,
       senderWallet: entry.source,
-      amountNano: pendingPayment.matchedAmountNano,
+      amountNano: pendingPayment.actualAmountNano,
     }
   }
 
@@ -208,13 +273,25 @@ export async function findIncomingPayment({
         (entry) =>
           getBlockType(entry) === 'receive' &&
           entry.confirmed === 'true' &&
-          entry.amount === raw &&
+          getAcceptedAmountMatch(entry.amount, [
+            {
+              amountNano: matchedAmountNano,
+              raw,
+              allowTolerance: Boolean(fallbackAmountNano),
+            },
+          ]) &&
           entry.hash &&
           isNanoHash(entry.hash) &&
           isRecentEnough(entry) &&
           !excluded.has(normalizeNanoHash(entry.hash)),
       )
-      return match ? [{ match, matchedAmountNano }] : []
+      return match
+        ? [{
+            match,
+            matchedAmountNano,
+            actualAmountNano: formatRawAsNano(match.amount),
+          }]
+        : []
     })[0]
   const data = await nanoRpc(
     {
@@ -245,7 +322,7 @@ export async function findIncomingPayment({
   return {
     hash: normalizeNanoHash(payment.match.hash),
     senderWallet: payment.match.account,
-    amountNano: payment.matchedAmountNano,
+    amountNano: payment.actualAmountNano,
   }
 }
 
@@ -267,8 +344,10 @@ export function getPaymentIssue(
 
   const expectedRaw = nanoToRaw(amountNano)
 
-  if (block.amount !== expectedRaw) {
-    return `El monto enviado fue ${formatRawAsNano(block.amount)} XNO. Debe ser exactamente ${amountNano} XNO.`
+  if (!getAcceptedAmountMatch(block.amount, [
+    { amountNano, raw: expectedRaw, allowTolerance: true },
+  ])) {
+    return `El monto enviado fue ${formatRawAsNano(block.amount)} XNO. Debe estar dentro de ${getPaymentAmountToleranceNano()} XNO de ${amountNano} XNO.`
   }
 
   if (getLinkAsAccount(block) !== receiverWallet) {
