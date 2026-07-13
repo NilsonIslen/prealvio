@@ -2204,7 +2204,7 @@ function CreatorPage() {
                         )}
                         {copiedQuestionId === question.id
                           ? 'Redacción copiada'
-                          : 'Copiar redacción'}
+                          : 'Copiar'}
                       </button>
                     )}
                     {(question.answer ||
