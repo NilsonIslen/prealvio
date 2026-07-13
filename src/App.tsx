@@ -540,7 +540,7 @@ function PaymentOptionsPanel({
       </div>
 
       <button className="secondary-action" type="button" onClick={onRetry}>
-        Intentar pago de nuevo
+        cancelar
       </button>
     </div>
   )
