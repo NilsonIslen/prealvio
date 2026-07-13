@@ -20,6 +20,8 @@ const platformFeePercent = 10
 const platformFeeMinimumRaw = BigInt(nanoToRaw('0.1'))
 const platformFeeQuantumRaw = BigInt(nanoToRaw('0.000001'))
 const paymentIntentTtlMs = 15 * 60 * 1000
+const sessionTtlMs = Number(envValue('PREALVIO_SESSION_TTL_MS', 'REVELOX_SESSION_TTL_MS', 7 * 24 * 60 * 60 * 1000))
+const sessionMaxAgeSeconds = Math.max(1, Math.floor(sessionTtlMs / 1000))
 const paymentCheckIntervalMs = 12 * 1000
 const maxRequestBodyBytes = Number(envValue('PREALVIO_MAX_BODY_BYTES', 'REVELOX_MAX_BODY_BYTES', 256 * 1024))
 const rateLimitWindowMs = Number(envValue('PREALVIO_RATE_LIMIT_WINDOW_MS', 'REVELOX_RATE_LIMIT_WINDOW_MS', 60 * 1000))
@@ -230,10 +232,12 @@ const getCookieToken = (request) => {
 const getSession = (request, store) => {
   const bearerToken = getBearerToken(request)
   const cookieToken = getCookieToken(request)
+  const now = Date.now()
 
   return store.sessions.find(
     (session) =>
-      session.token === bearerToken || session.token === cookieToken,
+      (session.token === bearerToken || session.token === cookieToken) &&
+      (!session.expiresAt || new Date(session.expiresAt).getTime() > now),
   )
 }
 
@@ -244,12 +248,19 @@ const isSecureRequest = (request) =>
 const cookieSecurity = (request) => (isSecureRequest(request) ? '; Secure' : '')
 
 const sessionCookie = (request, token) =>
-  `prealvio_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=31536000${cookieSecurity(request)}`
+  `prealvio_session=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${sessionMaxAgeSeconds}${cookieSecurity(request)}`
 
 const expiredSessionCookies = (request) => [
   `prealvio_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${cookieSecurity(request)}`,
   `revelox_session=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0${cookieSecurity(request)}`,
 ]
+
+const createSessionRecord = (token, ownerAddress, now = Date.now()) => ({
+  token,
+  ownerAddress,
+  createdAt: new Date(now).toISOString(),
+  expiresAt: new Date(now + sessionTtlMs).toISOString(),
+})
 
 const normalizeNanoAmount = (value) => {
   const normalized = String(value).trim()
@@ -911,11 +922,7 @@ const server = createServer(async (request, response) => {
           purpose: 'login',
           createdAt: new Date().toISOString(),
         })
-        store.sessions.push({
-          token,
-          ownerAddress: payment.senderWallet,
-          createdAt: new Date().toISOString(),
-        })
+        store.sessions.push(createSessionRecord(token, payment.senderWallet))
         const existingProfile = store.profiles.find(
           (profile) => profile.ownerAddress === payment.senderWallet,
         )

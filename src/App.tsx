@@ -836,7 +836,7 @@ function GuidePage() {
             habilita tu sesión en el navegador y dispositivo donde lo realizas.
           </p>
           <p>
-            La cookie de sesión queda configurada por 365 días. Además, Prealvio
+            La cookie de sesión queda configurada por 7 días. Además, Prealvio
             conserva el token en el navegador para recuperar la sesión mientras
             no cierres sesión, no cambies de móvil o navegador, ni borres los
             datos del sitio.
@@ -1929,7 +1929,7 @@ function CreatorPage() {
             <>
               <p className="login-note">
                 El login cuesta {LOGIN_AMOUNT_LABEL} XNO y queda activo en este
-                navegador por 365 días. Si cambias de dispositivo, borras los
+                navegador por 7 días. Si cambias de dispositivo, borras los
                 datos del navegador o cierras sesión, deberás iniciar sesión
                 nuevamente.
               </p>

@@ -11,6 +11,12 @@ const backupsPath = join(__dirname, 'data', 'backups')
 const backupLimit = Number(
   process.env.PREALVIO_BACKUP_LIMIT ?? process.env.REVELOX_BACKUP_LIMIT ?? 50,
 )
+const sessionTtlMs = Number(
+  process.env.PREALVIO_SESSION_TTL_MS ?? 7 * 24 * 60 * 60 * 1000,
+)
+const paymentIntentRetentionMs = Number(
+  process.env.PREALVIO_PAYMENT_INTENT_RETENTION_MS ?? 7 * 24 * 60 * 60 * 1000,
+)
 const databaseUrl = process.env.DATABASE_URL?.trim()
 const pool = databaseUrl
   ? new Pool({
@@ -31,6 +37,26 @@ const toIso = (value) => {
   if (!value) return undefined
   if (value instanceof Date) return value.toISOString()
   return new Date(value).toISOString()
+}
+
+const getSessionExpiresAt = (session) => {
+  if (session.expiresAt) return toIso(session.expiresAt)
+  return new Date(new Date(session.createdAt).getTime() + sessionTtlMs).toISOString()
+}
+
+const pruneExpiredRecords = (store) => {
+  const now = Date.now()
+  const paymentRetentionCutoff = now - paymentIntentRetentionMs
+
+  store.sessions = (store.sessions ?? []).filter(
+    (session) => new Date(getSessionExpiresAt(session)).getTime() > now,
+  )
+  store.paymentIntents = (store.paymentIntents ?? []).filter(
+    (intent) =>
+      intent.status !== 'pending' ||
+      new Date(intent.createdAt).getTime() >= paymentRetentionCutoff,
+  )
+  return store
 }
 
 const cloneStore = (store) => ({
@@ -59,8 +85,16 @@ async function ensureSchema() {
     create table if not exists sessions (
       token text primary key,
       owner_address text not null,
-      created_at timestamptz not null
+      created_at timestamptz not null,
+      expires_at timestamptz
     );
+
+    alter table sessions
+      add column if not exists expires_at timestamptz;
+
+    update sessions
+      set expires_at = created_at + interval '7 days'
+      where expires_at is null;
 
     create table if not exists payment_intents (
       id text primary key,
@@ -95,14 +129,12 @@ async function ensureSchema() {
 async function readPostgresStore(client = pool) {
   await ensureSchema()
 
-  const [profiles, sessions, paymentIntents, usedPayments] = await Promise.all([
-    client.query('select * from profiles order by created_at asc'),
-    client.query('select * from sessions order by created_at asc'),
-    client.query('select * from payment_intents order by created_at asc'),
-    client.query('select * from used_payments order by created_at asc'),
-  ])
+  const profiles = await client.query('select * from profiles order by created_at asc')
+  const sessions = await client.query('select * from sessions order by created_at asc')
+  const paymentIntents = await client.query('select * from payment_intents order by created_at asc')
+  const usedPayments = await client.query('select * from used_payments order by created_at asc')
 
-  return {
+  return pruneExpiredRecords({
     profiles: profiles.rows.map((row) => ({
       id: row.id,
       alias: row.alias ?? '',
@@ -115,6 +147,7 @@ async function readPostgresStore(client = pool) {
       token: row.token,
       ownerAddress: row.owner_address,
       createdAt: toIso(row.created_at),
+      expiresAt: toIso(row.expires_at),
     })),
     paymentIntents: paymentIntents.rows.map((row) => ({
       id: row.id,
@@ -138,7 +171,7 @@ async function readPostgresStore(client = pool) {
       answerId: row.answer_id ?? undefined,
       createdAt: toIso(row.created_at),
     })),
-  }
+  })
 }
 
 async function writePostgresStore(store, client) {
@@ -166,10 +199,15 @@ async function writePostgresStore(store, client) {
     await client.query(
       `
         insert into sessions (
-          token, owner_address, created_at
-        ) values ($1, $2, $3)
+          token, owner_address, created_at, expires_at
+        ) values ($1, $2, $3, $4)
       `,
-      [session.token, session.ownerAddress, session.createdAt],
+      [
+        session.token,
+        session.ownerAddress,
+        session.createdAt,
+        getSessionExpiresAt(session),
+      ],
     )
   }
 
@@ -221,7 +259,7 @@ async function writePostgresStore(store, client) {
 async function readJsonStore() {
   try {
     const content = await readFile(dataPath, 'utf8')
-    return { ...emptyStore, ...JSON.parse(content) }
+    return pruneExpiredRecords({ ...emptyStore, ...JSON.parse(content) })
   } catch {
     return structuredClone(emptyStore)
   }
