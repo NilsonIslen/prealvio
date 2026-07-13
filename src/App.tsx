@@ -672,7 +672,7 @@ function TopMenu({
           Comprar o vender XNO en Nanopaquete
         </a>
         <a href="https://hub.nano.org/trading" target="_blank" rel="noreferrer">
-          Comprar XNO a un proveedor global
+          Comprar o vender XNO en otro comercio
         </a>
         <a href={getGuideHref()}>Guía</a>
         <a href="/soporte">Soporte</a>
@@ -2030,7 +2030,7 @@ function CreatorPage() {
                 Comprar o vender XNO en Nanopaquete
               </a>
               <a href="https://hub.nano.org/trading" target="_blank" rel="noreferrer">
-                Comprar o vender XNO con proveedores globales
+                Comprar o vender XNO en otro comercio
               </a>
             </div>
           )}
