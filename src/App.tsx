@@ -1905,8 +1905,15 @@ function CreatorPage() {
 
           {isLoggedIn ? (
             <div className="active-session-details">
+              <div className="login-heading alias-heading">
+                <UserRound size={22} />
+                <div>
+                  <h2>Alias público</h2>
+                  <p>Este es el identificador visible de tu perfil.</p>
+                </div>
+              </div>
               <div className="session-detail alias-detail">
-                <span>Identificador del perfil</span>
+                <span>Editar alias</span>
                 <div className="alias-editor">
                   <input
                     type="text"
