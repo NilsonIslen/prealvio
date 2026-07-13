@@ -20,6 +20,7 @@ import './App.css'
 const LOGIN_AMOUNT_LABEL = '0,1'
 const LOGIN_INTENT_STORAGE_KEY = 'prealvio-login-intent'
 const LEGACY_LOGIN_INTENT_STORAGE_KEY = 'revelox-login-intent'
+const PLATFORM_FEE_INTENT_STORAGE_KEY = 'prealvio-platform-fee-intent'
 const AUTH_TOKEN_STORAGE_KEY = 'prealvio-auth-token'
 const LEGACY_AUTH_TOKEN_STORAGE_KEY = 'revelox-auth-token'
 const PROFILE_ID_STORAGE_KEY = 'prealvio-profile-id'
@@ -136,6 +137,16 @@ const getStoredLoginIntent = () => {
       localStorage.getItem(LEGACY_LOGIN_INTENT_STORAGE_KEY)
     return value ? (JSON.parse(value) as PaymentIntent) : null
   } catch {
+    return null
+  }
+}
+
+const getStoredPlatformFeeIntent = () => {
+  try {
+    const value = localStorage.getItem(PLATFORM_FEE_INTENT_STORAGE_KEY)
+    return value ? (JSON.parse(value) as PlatformFeePaymentIntent) : null
+  } catch {
+    localStorage.removeItem(PLATFORM_FEE_INTENT_STORAGE_KEY)
     return null
   }
 }
@@ -1350,7 +1361,7 @@ function CreatorPage() {
     getStoredLoginIntent,
   )
   const [platformFeeIntent, setPlatformFeeIntent] =
-    useState<PlatformFeePaymentIntent | null>(null)
+    useState<PlatformFeePaymentIntent | null>(getStoredPlatformFeeIntent)
   const [authState, setAuthState] = useState<RequestState>({
     loading: false,
     error: '',
@@ -1570,6 +1581,7 @@ function CreatorPage() {
         },
       )
       setPlatformFeeIntent(intent)
+      localStorage.setItem(PLATFORM_FEE_INTENT_STORAGE_KEY, JSON.stringify(intent))
       setPlatformFeeBalance(intent.balance)
       setPlatformFeeState({ loading: false, error: '' })
     } catch (error) {
@@ -1606,6 +1618,7 @@ function CreatorPage() {
 
         setPlatformFeeBalance(data.balance)
         setPlatformFeeIntent(null)
+        localStorage.removeItem(PLATFORM_FEE_INTENT_STORAGE_KEY)
         setPlatformFeeState({ loading: false, error: '' })
       } catch (error) {
         if (!active) return
@@ -1615,6 +1628,7 @@ function CreatorPage() {
 
         if (message.includes('venció') || message.includes('utilizado')) {
           setPlatformFeeIntent(null)
+          localStorage.removeItem(PLATFORM_FEE_INTENT_STORAGE_KEY)
           setPlatformFeeState({ loading: false, error: message })
         } else {
           setPlatformFeeState({
@@ -1638,6 +1652,7 @@ function CreatorPage() {
 
   const retryPlatformFeePayment = () => {
     setPlatformFeeIntent(null)
+    localStorage.removeItem(PLATFORM_FEE_INTENT_STORAGE_KEY)
     setPlatformFeeState({ loading: false, error: '' })
   }
 
@@ -1654,6 +1669,7 @@ function CreatorPage() {
       localStorage.removeItem(LEGACY_AUTH_TOKEN_STORAGE_KEY)
       localStorage.removeItem(LEGACY_PROFILE_ID_STORAGE_KEY)
       localStorage.removeItem(LOGIN_INTENT_STORAGE_KEY)
+      localStorage.removeItem(PLATFORM_FEE_INTENT_STORAGE_KEY)
       privateProfileRef.current = null
       setAuthToken('')
       setProfileId('')
