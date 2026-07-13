@@ -270,6 +270,29 @@ const getOwnerIdentifier = (ownerAddress) => ownerAddress.slice(-7)
 
 const createProfileId = () => `p_${randomBytes(9).toString('base64url')}`
 
+const normalizeProfileAlias = (value) =>
+  String(value ?? '')
+    .trim()
+    .replace(/^@+/, '')
+    .replace(/\s+/g, '_')
+    .slice(0, 30)
+
+const validateProfileAlias = (value) => {
+  const alias = normalizeProfileAlias(value)
+
+  if (!alias) return ''
+
+  if (alias.length < 3) {
+    throw new Error('El alias debe tener al menos 3 caracteres')
+  }
+
+  if (!/^[A-Za-z0-9._-]+$/.test(alias)) {
+    throw new Error('Usa solo letras, números, punto, guion o guion bajo en el alias')
+  }
+
+  return alias
+}
+
 const createUniqueProfileId = (store) => {
   let profileId = createProfileId()
   while (store.profiles.some((item) => item.id === profileId)) {
@@ -367,6 +390,7 @@ const isCurrentAnswer = (question, item) => {
 
 const getPublicProfile = (profile) => ({
   id: profile.id,
+  alias: profile.alias ?? '',
   createdAt: profile.createdAt,
   answers: profile.answers.flatMap((item) => {
     const question = getQuestion(item.id)
@@ -879,6 +903,7 @@ const server = createServer(async (request, response) => {
         } else {
           store.profiles.push({
             id: createUniqueProfileId(store),
+            alias: '',
             ownerAddress: payment.senderWallet,
             answers: [],
             createdAt: new Date().toISOString(),
@@ -1193,6 +1218,43 @@ const server = createServer(async (request, response) => {
       sendJson(response, 400, {
         error:
           error instanceof Error ? error.message : 'No se pudo guardar la respuesta',
+      })
+    }
+    return
+  }
+
+  if (request.method === 'PUT' && url.pathname === '/api/profile/alias') {
+    try {
+      const body = await readBody(request)
+      const store = await readStore()
+      const session = getSession(request, store)
+
+      if (!session) {
+        sendJson(response, 401, { error: 'Sesión inválida o vencida' })
+        return
+      }
+
+      const alias = validateProfileAlias(body.alias)
+      const profile = await mutateStore((current) => {
+        const existingProfile = current.profiles.find(
+          (item) => item.ownerAddress === session.ownerAddress,
+        )
+
+        if (!existingProfile) {
+          throw new Error('Perfil no encontrado')
+        }
+
+        ensureProfileId(current, existingProfile)
+        existingProfile.alias = alias
+        existingProfile.updatedAt = new Date().toISOString()
+        return getPrivateProfile(existingProfile, current)
+      })
+
+      sendJson(response, 200, profile)
+    } catch (error) {
+      sendJson(response, 400, {
+        error:
+          error instanceof Error ? error.message : 'No se pudo guardar el alias',
       })
     }
     return

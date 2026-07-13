@@ -71,6 +71,7 @@ type QuestionDefinition = {
 
 type PublicProfile = {
   id: string
+  alias?: string
   createdAt: string
   answers: Array<{
     id: number
@@ -594,6 +595,11 @@ const getGuideReturnPath = () => {
   return returnPath
 }
 
+const formatProfileAlias = (alias?: string) => {
+  const normalized = alias?.trim().replace(/^@+/, '')
+  return normalized ? `@${normalized}` : 'Perfil sin alias'
+}
+
 function TopMenu({
   createProfileInNewTab = false,
   onLogout,
@@ -859,10 +865,11 @@ function GuidePage() {
           </p>
           <p>
             Antes de revelar una tarjeta, el perfil no permite identificar por
-            sí mismo a la persona titular. Puedes reconocerlo por los últimos 7
-            caracteres de su wallet Nano o porque esa persona compartió
-            directamente el enlace contigo. Los enlaces públicos pueden usar
-            ese identificador corto para ser más fáciles de compartir.
+            sí mismo a la persona titular. Puedes reconocerlo por el alias que
+            su titular haya configurado o porque esa persona compartió
+            directamente el enlace contigo. El enlace público usa una referencia
+            interna distinta al alias para que puedas cambiar el alias sin
+            romper el enlace.
           </p>
         </article>
 
@@ -913,7 +920,7 @@ function GuidePage() {
             <li>Al usar Prealvio aceptas estas indicaciones, políticas y términos.</li>
             <li>Eres responsable por el contenido que publicas y por cómo usas lo revelado.</li>
             <li>Los pagos de login, revelación y comisión se realizan en XNO y dependen de la red Nano y de la verificación disponible.</li>
-            <li>El identificador de sesión muestra los últimos 7 caracteres de tu wallet Nano para que reconozcas tu sesión sin exponer la dirección completa.</li>
+            <li>El identificador público del perfil es el alias que configura su titular; el enlace del perfil usa una referencia interna independiente.</li>
             <li>El acceso, los pagos y las sesiones pueden depender del navegador y del estado de la red.</li>
             <li>La app puede cambiar mientras siga en desarrollo experimental.</li>
           </ul>
@@ -1222,7 +1229,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
         <div className="profile-avatar">
           <img src="/favicon.png" alt="" aria-hidden="true" />
         </div>
-        <p className="profile-public-id">{profile.id}</p>
+        <p className="profile-public-id">{formatProfileAlias(profile.alias)}</p>
       </section>
 
       <section className="public-profile-grid">
@@ -1366,6 +1373,12 @@ function CreatorPage() {
       localStorage.getItem(LEGACY_PROFILE_ID_STORAGE_KEY) ??
       '',
   )
+  const [profileAlias, setProfileAlias] = useState('')
+  const [aliasDraft, setAliasDraft] = useState('')
+  const [aliasState, setAliasState] = useState<RequestState>({
+    loading: false,
+    error: '',
+  })
   const [copied, setCopied] = useState(false)
   const [copiedQuestionId, setCopiedQuestionId] = useState<number | null>(null)
   const { consentDialog, requestConsent } = useConsentGate()
@@ -1402,6 +1415,8 @@ function CreatorPage() {
         privateProfileRef.current = profile
         if (!authToken) setAuthToken(COOKIE_SESSION)
         setProfileId(profile.id)
+        setProfileAlias(profile.alias ?? '')
+        setAliasDraft(profile.alias ?? '')
         setPlatformFeeBalance(profile.platformFee ?? null)
         localStorage.setItem(PROFILE_ID_STORAGE_KEY, profile.id)
         localStorage.removeItem(LEGACY_PROFILE_ID_STORAGE_KEY)
@@ -1417,6 +1432,8 @@ function CreatorPage() {
         localStorage.removeItem(LEGACY_PROFILE_ID_STORAGE_KEY)
         setAuthToken('')
         setProfileId('')
+        setProfileAlias('')
+        setAliasDraft('')
         setPlatformFeeBalance(null)
       })
   }, [authToken])
@@ -1640,6 +1657,8 @@ function CreatorPage() {
       privateProfileRef.current = null
       setAuthToken('')
       setProfileId('')
+      setProfileAlias('')
+      setAliasDraft('')
       setLoginIntent(null)
       setPlatformFeeIntent(null)
       setPlatformFeeBalance(null)
@@ -1750,6 +1769,29 @@ function CreatorPage() {
     setCopied(true)
   }
 
+  const saveProfileAlias = async () => {
+    setAliasState({ loading: true, error: '' })
+
+    try {
+      const profile = await apiRequest<PrivateProfile>('/api/profile/alias', {
+        method: 'PUT',
+        headers: getAuthHeaders(authToken),
+        body: JSON.stringify({ alias: aliasDraft }),
+      })
+
+      privateProfileRef.current = profile
+      setProfileAlias(profile.alias ?? '')
+      setAliasDraft(profile.alias ?? '')
+      setAliasState({ loading: false, error: '' })
+    } catch (error) {
+      setAliasState({
+        loading: false,
+        error:
+          error instanceof Error ? error.message : 'No se pudo guardar el alias',
+      })
+    }
+  }
+
   return (
     <main className="app-shell">
       <header className="topbar creator-topbar">
@@ -1757,7 +1799,7 @@ function CreatorPage() {
         <div className="topbar-actions">
           {isLoggedIn ? (
             <span className="session-pill verified">
-              {profileId || 'Sesión activa'}
+              {profileAlias ? formatProfileAlias(profileAlias) : 'Sesión activa'}
             </span>
           ) : (
             <span className="session-pill">
@@ -1863,6 +1905,43 @@ function CreatorPage() {
 
           {isLoggedIn ? (
             <div className="active-session-details">
+              <div className="session-detail alias-detail">
+                <span>Identificador del perfil</span>
+                <div className="alias-editor">
+                  <input
+                    type="text"
+                    value={aliasDraft}
+                    onChange={(event) => {
+                      setAliasDraft(event.target.value)
+                      setAliasState({ loading: false, error: '' })
+                    }}
+                    placeholder="tu_alias"
+                    maxLength={30}
+                    aria-label="Alias del perfil"
+                  />
+                  <button
+                    className="secondary-action"
+                    type="button"
+                    onClick={() => requestConsent(saveProfileAlias)}
+                    disabled={
+                      aliasState.loading ||
+                      aliasDraft.trim().replace(/^@+/, '') === profileAlias
+                    }
+                  >
+                    {aliasState.loading ? (
+                      <LoaderCircle className="spin" size={18} />
+                    ) : (
+                      <Check size={18} />
+                    )}
+                    Guardar alias
+                  </button>
+                </div>
+                <p>
+                  Este nombre se muestra en el perfil público. Cambiarlo no
+                  cambia el enlace.
+                </p>
+                {aliasState.error && <p className="form-error">{aliasState.error}</p>}
+              </div>
               <div className="session-detail">
                 <span>Enlace</span>
                 {shareUrl && (

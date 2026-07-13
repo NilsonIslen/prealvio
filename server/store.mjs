@@ -47,10 +47,14 @@ async function ensureSchema() {
     create table if not exists profiles (
       id text primary key,
       owner_address text not null unique,
+      alias text,
       answers jsonb not null default '[]'::jsonb,
       created_at timestamptz not null,
       updated_at timestamptz not null
     );
+
+    alter table profiles
+      add column if not exists alias text;
 
     create table if not exists sessions (
       token text primary key,
@@ -101,6 +105,7 @@ async function readPostgresStore(client = pool) {
   return {
     profiles: profiles.rows.map((row) => ({
       id: row.id,
+      alias: row.alias ?? '',
       ownerAddress: row.owner_address,
       answers: row.answers ?? [],
       createdAt: toIso(row.created_at),
@@ -143,11 +148,12 @@ async function writePostgresStore(store, client) {
     await client.query(
       `
         insert into profiles (
-          id, owner_address, answers, created_at, updated_at
-        ) values ($1, $2, $3::jsonb, $4, $5)
+          id, alias, owner_address, answers, created_at, updated_at
+        ) values ($1, $2, $3, $4::jsonb, $5, $6)
       `,
       [
         profile.id,
+        profile.alias ?? '',
         profile.ownerAddress,
         JSON.stringify(profile.answers ?? []),
         profile.createdAt,

@@ -819,6 +819,34 @@ h2 {
   overflow-wrap: anywhere;
 }
 
+.alias-detail {
+  gap: 8px;
+}
+
+.alias-editor {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: stretch;
+}
+
+.alias-editor input {
+  min-width: 0;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid rgba(32, 43, 48, 0.12);
+  border-radius: 7px;
+  color: var(--heading);
+  font-size: 0.9rem;
+  font-weight: 800;
+  background: #ffffff;
+}
+
+.alias-editor .secondary-action {
+  width: auto;
+  white-space: nowrap;
+}
+
 .locked-badge {
   display: inline-flex;
   align-items: center;
@@ -1499,6 +1527,14 @@ h2 {
 
   .payment-options {
     grid-template-columns: 1fr;
+  }
+
+  .alias-editor {
+    grid-template-columns: 1fr;
+  }
+
+  .alias-editor .secondary-action {
+    width: 100%;
   }
 
   .payment-qr {
