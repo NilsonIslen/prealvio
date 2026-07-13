@@ -1515,6 +1515,13 @@ const server = createServer(async (request, response) => {
   sendJson(response, 404, { error: 'Ruta no encontrada' })
 })
 
-server.listen(port, () => {
-  console.log(`Prealvio API activa en http://localhost:${port}`)
-})
+readStore()
+  .then(() => {
+    server.listen(port, () => {
+      console.log(`Prealvio API activa en http://localhost:${port}`)
+    })
+  })
+  .catch((error) => {
+    console.error('No se pudo preparar el almacenamiento de Prealvio', error)
+    process.exit(1)
+  })
