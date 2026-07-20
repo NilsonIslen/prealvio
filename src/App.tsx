@@ -28,7 +28,7 @@ const PROFILE_ID_STORAGE_KEY = 'prealvio-profile-id'
 const LEGACY_PROFILE_ID_STORAGE_KEY = 'revelox-profile-id'
 const COOKIE_SESSION = 'cookie-session'
 const xnoCreatorStoreUrl =
-  import.meta.env.VITE_XNO_CREATOR_STORE_URL?.trim() ?? ''
+  import.meta.env.VITE_XNO_CREATOR_STORE_URL?.trim() || 'https://nanopaquete.com'
 
 type Question = {
   id: number
