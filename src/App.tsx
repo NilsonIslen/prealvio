@@ -883,10 +883,12 @@ function GuidePage() {
         <article className="guide-section">
           <h2>Sobre Prealvio</h2>
           <p>
-            Prealvio ayuda a conocer mejor a una persona antes de construir un
-            vínculo importante. Cada perfil se forma con tarjetas sobre partes
-            de su identidad, y cada tarjeta contiene una redacción escrita por
-            su titular.
+            Prealvio ayuda a construir un contexto más profundo para conocer
+            mejor a una persona, y también permite que quien escribe reciba
+            apoyo en Nano por el tiempo, la sinceridad y el cuidado que pone en
+            sus redacciones. Cada perfil se forma con tarjetas sobre partes de
+            su identidad, y cada tarjeta contiene una redacción escrita por su
+            titular.
           </p>
           <p>
             La intención no es responder preguntas aisladas, sino construir una
