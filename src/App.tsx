@@ -867,20 +867,6 @@ function GuidePage() {
         </div>
 
         <article className="guide-section">
-          <h2>Comisión de Prealvio</h2>
-          <p>
-            Quien publica recibe directamente en su wallet el precio definido
-            para cada revelación. Prealvio cobra una comisión del 10% sobre esos
-            ingresos recibidos por el redactor.
-          </p>
-          <p>
-            Cuando tengas comisión pendiente, aparecerá un aviso en la parte
-            superior de tu página principal con el saldo a cancelar y un botón
-            de pago. El cobro se genera desde 0,1 XNO pendientes.
-          </p>
-        </article>
-
-        <article className="guide-section">
           <h2>Sobre Prealvio</h2>
           <p>
             Prealvio ayuda a construir un contexto más profundo para conocer
@@ -922,6 +908,20 @@ function GuidePage() {
             conserva el token en el navegador para recuperar la sesión mientras
             no cierres sesión, no cambies de móvil o navegador, ni borres los
             datos del sitio.
+          </p>
+        </article>
+
+        <article className="guide-section">
+          <h2>Comisión de Prealvio</h2>
+          <p>
+            Quien publica recibe directamente en su wallet el precio definido
+            para cada revelación. Prealvio cobra una comisión del 10% sobre esos
+            ingresos recibidos por el redactor.
+          </p>
+          <p>
+            Cuando tengas comisión pendiente, aparecerá un aviso en la parte
+            superior de tu página principal con el saldo a cancelar y un botón
+            de pago. El cobro se genera desde 0,1 XNO pendientes.
           </p>
         </article>
 
