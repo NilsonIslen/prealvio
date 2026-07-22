@@ -82,11 +82,52 @@ const getPublicOrigin = (request) => {
 const pickSharePreviewPhrase = () =>
   sharePreviewPhrases[randomBytes(1)[0] % sharePreviewPhrases.length]
 
+const wrapPreviewText = (text, maxLineLength = 38) => {
+  const words = String(text ?? '').split(/\s+/).filter(Boolean)
+  const lines = []
+  let currentLine = ''
+
+  for (const word of words) {
+    const nextLine = currentLine ? `${currentLine} ${word}` : word
+
+    if (nextLine.length > maxLineLength && currentLine) {
+      lines.push(currentLine)
+      currentLine = word
+    } else {
+      currentLine = nextLine
+    }
+  }
+
+  if (currentLine) lines.push(currentLine)
+  return lines.slice(0, 5)
+}
+
+const sendSharePreviewImage = (response, phrase) => {
+  const lines = wrapPreviewText(phrase)
+  const firstLineY = 245 - Math.max(0, lines.length - 3) * 34
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#fff8f4"/>
+  <circle cx="100" cy="90" r="220" fill="#ff5f7e" opacity="0.16"/>
+  <circle cx="1090" cy="560" r="250" fill="#d84364" opacity="0.12"/>
+  <rect x="74" y="70" width="1052" height="490" rx="42" fill="#ffffff" stroke="#f0d8de" stroke-width="3"/>
+  <text x="600" y="158" text-anchor="middle" fill="#7b2438" font-family="Inter, system-ui, sans-serif" font-size="56" font-weight="900">Prealvio</text>
+  ${lines.map((line, index) => `<text x="600" y="${firstLineY + index * 64}" text-anchor="middle" fill="#38232a" font-family="Inter, system-ui, sans-serif" font-size="48" font-weight="850">${escapeHtml(line)}</text>`).join('\n  ')}
+  <text x="600" y="510" text-anchor="middle" fill="#7b4a54" font-family="Inter, system-ui, sans-serif" font-size="30" font-weight="750">Conoce lo que una persona decide revelar</text>
+</svg>`
+
+  response.writeHead(200, {
+    'Content-Type': 'image/svg+xml; charset=utf-8',
+    'Cache-Control': 'public, max-age=3600',
+  })
+  response.end(svg)
+}
+
 const sendAppHtml = async (request, response, url) => {
   const description = pickSharePreviewPhrase()
   const origin = getPublicOrigin(request)
   const pageUrl = `${origin}${url.pathname}${url.search}`
-  const previewImageUrl = `${origin}/favicon.png`
+  const previewImageUrl = `${origin}/share-preview.svg?text=${encodeURIComponent(description)}`
   const meta = [
     '<meta name="description" content="' + escapeHtml(description) + '" />',
     '<meta property="og:type" content="website" />',
@@ -95,7 +136,7 @@ const sendAppHtml = async (request, response, url) => {
     '<meta property="og:description" content="' + escapeHtml(description) + '" />',
     '<meta property="og:url" content="' + escapeHtml(pageUrl) + '" />',
     '<meta property="og:image" content="' + escapeHtml(previewImageUrl) + '" />',
-    '<meta name="twitter:card" content="summary" />',
+    '<meta name="twitter:card" content="summary_large_image" />',
     '<meta name="twitter:title" content="Perfil privado en Prealvio" />',
     '<meta name="twitter:description" content="' + escapeHtml(description) + '" />',
     '<meta name="twitter:image" content="' + escapeHtml(previewImageUrl) + '" />',
@@ -361,6 +402,9 @@ const countCharacters = (value) => String(value ?? '').trim().length
 
 const countLetters = (value) => String(value ?? '').match(/\p{L}/gu)?.length ?? 0
 
+const normalizeAnswerForChangeDetection = (value) =>
+  String(value ?? '').replace(/\r\n/g, '\n').trim()
+
 const getStoredFieldValue = (answerText, field, fields = []) => {
   const prefix = `${field.label}:`
   const startIndex = answerText.startsWith(prefix)
@@ -415,6 +459,7 @@ const getPublicProfile = (profile) => ({
           price: item.price,
           wordCount: countWords(answer),
           letterCount: countLetters(answer),
+          updatedAt: item.updatedAt ?? item.createdAt ?? profile.updatedAt ?? profile.createdAt,
         }]
       : []
   }),
@@ -475,6 +520,7 @@ const getPrivateProfile = (profile, store) => ({
           prompt: question.prompt,
           answer: decryptAnswer(item.answer),
           price: item.price,
+          updatedAt: item.updatedAt ?? item.createdAt ?? profile.updatedAt ?? profile.createdAt,
         }]
       : []
   }),
@@ -717,6 +763,14 @@ const verifyPaymentIntent = async (
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url ?? '/', `http://${request.headers.host}`)
+
+  if (request.method === 'GET' && url.pathname === '/share-preview.svg') {
+    sendSharePreviewImage(
+      response,
+      String(url.searchParams.get('text') ?? pickSharePreviewPhrase()),
+    )
+    return
+  }
 
   if (
     (request.method === 'GET' || request.method === 'HEAD') &&
@@ -1203,11 +1257,12 @@ const server = createServer(async (request, response) => {
       }
 
       let answer
+      let answerText = ''
 
       if (request.method === 'PUT') {
         const body = await readBody(request)
         const price = normalizeNanoAmount(body.price)
-        const answerText = normalizeQuestionAnswer(question, body)
+        answerText = normalizeQuestionAnswer(question, body)
 
         if (!answerText || !price) {
           sendJson(response, 400, {
@@ -1234,12 +1289,31 @@ const server = createServer(async (request, response) => {
         }
 
         ensureProfileId(current, existingProfile)
+        const previousAnswer = existingProfile.answers.find(
+          (item) => item.id === questionId,
+        )
+        const previousAnswerText = previousAnswer
+          ? decryptAnswer(previousAnswer.answer)
+          : ''
+        const now = new Date().toISOString()
+
+        if (answer) {
+          const redactionChanged =
+            normalizeAnswerForChangeDetection(previousAnswerText) !==
+            normalizeAnswerForChangeDetection(answerText)
+
+          answer.updatedAt = redactionChanged || !previousAnswer
+            ? now
+            : previousAnswer.updatedAt ?? previousAnswer.createdAt ?? existingProfile.updatedAt ?? now
+          answer.createdAt = previousAnswer?.createdAt ?? answer.updatedAt
+        }
+
         existingProfile.answers = existingProfile.answers.filter(
           (item) => item.id !== questionId,
         )
         if (answer) existingProfile.answers.push(answer)
         existingProfile.answers.sort((left, right) => left.id - right.id)
-        existingProfile.updatedAt = new Date().toISOString()
+        existingProfile.updatedAt = now
         return getPrivateProfile(existingProfile, current)
       })
 
@@ -1312,8 +1386,29 @@ const server = createServer(async (request, response) => {
         }
 
         ensureProfileId(current, existingProfile)
-        existingProfile.answers = answers
-        existingProfile.updatedAt = new Date().toISOString()
+        const now = new Date().toISOString()
+        existingProfile.answers = answers.map((answer) => {
+          const previousAnswer = existingProfile.answers.find(
+            (item) => item.id === answer.id,
+          )
+          const previousAnswerText = previousAnswer
+            ? decryptAnswer(previousAnswer.answer)
+            : ''
+          const answerText = decryptAnswer(answer.answer)
+          const redactionChanged =
+            normalizeAnswerForChangeDetection(previousAnswerText) !==
+            normalizeAnswerForChangeDetection(answerText)
+          const updatedAt = redactionChanged || !previousAnswer
+            ? now
+            : previousAnswer.updatedAt ?? previousAnswer.createdAt ?? existingProfile.updatedAt ?? now
+
+          return {
+            ...answer,
+            createdAt: previousAnswer?.createdAt ?? updatedAt,
+            updatedAt,
+          }
+        })
+        existingProfile.updatedAt = now
         return getPrivateProfile(existingProfile, current)
       })
 

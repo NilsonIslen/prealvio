@@ -849,6 +849,68 @@ h2 {
   white-space: nowrap;
 }
 
+.profile-qr-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px;
+  border: 1px solid rgba(216, 67, 100, 0.18);
+  border-radius: 10px;
+  background: #fffaf7;
+}
+
+.profile-qr-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.profile-qr-copy span,
+.answer-updated-at {
+  color: #7b4a54;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.profile-qr-copy strong {
+  color: #351f28;
+  font-size: 1rem;
+  line-height: 1.2;
+}
+
+.profile-qr-copy p {
+  margin: 0;
+  color: #6b555a;
+  font-size: 0.86rem;
+  font-weight: 750;
+  line-height: 1.35;
+}
+
+.profile-qr-preview {
+  display: grid;
+  place-items: center;
+  width: 116px;
+  aspect-ratio: 1;
+  padding: 7px;
+  border: 1px solid rgba(32, 43, 48, 0.1);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.profile-qr-preview svg {
+  width: 100%;
+  height: 100%;
+}
+
+.profile-qr-panel .secondary-action {
+  grid-column: 1 / -1;
+}
+
+.answer-updated-at {
+  margin: -4px 0 0;
+  color: #8a6a70;
+}
+
 .locked-badge {
   display: inline-flex;
   align-items: center;
@@ -1371,6 +1433,37 @@ h2 {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.75);
 }
 
+.hidden-preview {
+  position: relative;
+  overflow: hidden;
+  min-height: 220px;
+  align-content: end;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 247, 248, 0.96)),
+    radial-gradient(circle at 24% 20%, rgba(255, 95, 126, 0.28), transparent 170px),
+    linear-gradient(135deg, #fff7f8, #eef8f4);
+}
+
+.hidden-preview::before {
+  content: "";
+  position: absolute;
+  top: 28px;
+  left: 50%;
+  width: min(72%, 340px);
+  height: 92px;
+  border: 1px solid rgba(123, 36, 56, 0.12);
+  border-radius: 10px;
+  background:
+    linear-gradient(90deg, rgba(123, 36, 56, 0.16), transparent 68%),
+    linear-gradient(90deg, rgba(123, 36, 56, 0.12), transparent 76%),
+    linear-gradient(90deg, rgba(123, 36, 56, 0.1), transparent 62%);
+  background-position: 18px 20px, 18px 46px, 18px 72px;
+  background-repeat: no-repeat;
+  background-size: 78% 10px, 88% 10px, 64% 10px;
+  box-shadow: 0 18px 44px rgba(123, 36, 56, 0.12);
+  transform: translateX(-50%) rotate(-2deg);
+}
+
 .hidden-answer p {
   min-width: 0;
   margin: 0;
@@ -1380,6 +1473,7 @@ h2 {
 }
 
 .hidden-preview-heading {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1387,6 +1481,7 @@ h2 {
 }
 
 .hidden-preview .reveal-card-metrics {
+  position: relative;
   width: min(100%, 420px);
   margin: 0 auto;
 }
@@ -1537,6 +1632,15 @@ h2 {
 
   .alias-editor .secondary-action {
     width: 100%;
+  }
+
+  .profile-qr-panel {
+    grid-template-columns: 1fr;
+    justify-items: stretch;
+  }
+
+  .profile-qr-preview {
+    justify-self: center;
   }
 
   .payment-qr {

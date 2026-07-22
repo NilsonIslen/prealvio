@@ -4,6 +4,7 @@ import {
   Check,
   ChevronDown,
   Copy,
+  Download,
   Eye,
   EyeOff,
   ArrowLeft,
@@ -38,6 +39,7 @@ type Question = {
   values: Record<string, QuestionValue>
   price: string
   suggestedPrice: string
+  updatedAt?: string
   writingExample?: string
   minRequiredFields?: number
   minWords?: number
@@ -82,6 +84,7 @@ type PublicProfile = {
     price: string
     wordCount: number
     letterCount: number
+    updatedAt?: string
   }>
 }
 
@@ -94,6 +97,7 @@ type PrivateProfile = Omit<PublicProfile, 'answers'> & {
     prompt: string
     answer: string
     price: string
+    updatedAt?: string
   }>
 }
 
@@ -190,6 +194,15 @@ const getAnswerAccessKey = (answer: {
 
 const formatCount = (count: number, singular: string, plural: string) =>
   `${count.toLocaleString('es-CO')} ${count === 1 ? singular : plural}`
+
+const formatUpdatedDate = (value?: string) => {
+  if (!value) return 'Sin fecha de actualización'
+
+  return new Intl.DateTimeFormat('es-CO', {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value))
+}
 
 const getQuestionDraftStorageKey = (
   profileId: string,
@@ -375,6 +388,7 @@ const applyProfileAnswers = (questions: Question[], profile: PrivateProfile) =>
           answer: savedAnswer.answer,
           values: parseQuestionValues(question, savedAnswer.answer),
           price: savedAnswer.price,
+          updatedAt: savedAnswer.updatedAt,
         }
       : question
   })
@@ -466,6 +480,72 @@ const copyText = async (value: string) => {
   input.select()
   document.execCommand('copy')
   input.remove()
+}
+
+const downloadProfileQrPoster = async (profileUrl: string, qrSvg: SVGSVGElement | null) => {
+  if (!profileUrl || !qrSvg) return
+
+  const width = 1400
+  const height = 1800
+  const canvas = document.createElement('canvas')
+  canvas.width = width
+  canvas.height = height
+  const context = canvas.getContext('2d')
+  if (!context) return
+
+  context.fillStyle = '#fff8f4'
+  context.fillRect(0, 0, width, height)
+  context.fillStyle = '#ff5f7e'
+  context.fillRect(0, 0, width, 28)
+  context.fillStyle = '#7b2438'
+  context.font = '900 96px Inter, system-ui, sans-serif'
+  context.textAlign = 'center'
+  context.fillText('Prealvio', width / 2, 190)
+
+  context.fillStyle = '#38232a'
+  context.font = '850 64px Inter, system-ui, sans-serif'
+  context.fillText('¿Quieres saber algo más de mí?', width / 2, 330)
+  context.fillStyle = '#7b4a54'
+  context.font = '700 44px Inter, system-ui, sans-serif'
+  context.fillText('Escanea y descubre mi perfil.', width / 2, 400)
+
+  const serializedQr = new XMLSerializer().serializeToString(qrSvg)
+  const image = new Image()
+  const imageLoaded = new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve()
+    image.onerror = () => reject(new Error('No se pudo preparar el QR.'))
+  })
+  image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(serializedQr)}`
+  await imageLoaded
+
+  const qrSize = 820
+  const qrX = (width - qrSize) / 2
+  const qrY = 520
+  context.fillStyle = '#ffffff'
+  context.strokeStyle = '#f0d8de'
+  context.lineWidth = 4
+  context.beginPath()
+  context.roundRect(qrX - 38, qrY - 38, qrSize + 76, qrSize + 76, 32)
+  context.fill()
+  context.stroke()
+  context.drawImage(image, qrX, qrY, qrSize, qrSize)
+
+  context.fillStyle = '#7b2438'
+  context.font = '800 34px Inter, system-ui, sans-serif'
+  context.fillText('Perfil privado en Prealvio', width / 2, 1460)
+  context.fillStyle = '#6a555b'
+  context.font = '650 28px Inter, system-ui, sans-serif'
+  context.fillText(profileUrl, width / 2, 1525)
+
+  const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png', 0.96))
+  if (!blob) return
+
+  const objectUrl = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = objectUrl
+  link.download = 'prealvio-qr-perfil.png'
+  link.click()
+  URL.revokeObjectURL(objectUrl)
 }
 
 const apiRequest = async <T,>(
@@ -1310,6 +1390,9 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
                   <span className="question-number">{index + 1}</span>
                   <h2 className="fixed-question">{questionContent.title}</h2>
                 </div>
+                <p className="answer-updated-at">
+                  Actualizada: {formatUpdatedDate(item.updatedAt)}
+                </p>
               </div>
 
               {!revealedAnswer && (
@@ -1394,6 +1477,7 @@ function PublicProfilePage({ profileId }: { profileId: string }) {
 function CreatorPage() {
   const [questions, setQuestions] = useState(initialQuestions)
   const privateProfileRef = useRef<PrivateProfile | null>(null)
+  const profileQrRef = useRef<HTMLDivElement | null>(null)
   const [authToken, setAuthToken] = useState(
     () =>
       localStorage.getItem(AUTH_TOKEN_STORAGE_KEY) ??
@@ -1731,6 +1815,7 @@ function CreatorPage() {
           answer: '',
           values: {},
           price: '',
+          updatedAt: undefined,
         })),
       )
       setAuthState({ loading: false, error: '' })
@@ -1788,8 +1873,9 @@ function CreatorPage() {
                 answer: savedAnswer.answer,
                 values: parseQuestionValues(question, savedAnswer.answer),
                 price: savedAnswer.price,
+                updatedAt: savedAnswer.updatedAt,
               }
-            : { ...question, answer: '', values: {}, price: '' }
+            : { ...question, answer: '', values: {}, price: '', updatedAt: undefined }
         }),
       )
       setPublishState({ loading: false, error: '' })
@@ -1826,6 +1912,13 @@ function CreatorPage() {
 
     await copyText(shareUrl)
     setCopied(true)
+  }
+
+  const downloadShareQr = () => {
+    void downloadProfileQrPoster(
+      shareUrl,
+      profileQrRef.current?.querySelector('svg') ?? null,
+    )
   }
 
   const saveProfileAlias = async () => {
@@ -2014,6 +2107,26 @@ function CreatorPage() {
                 {copied ? <Check size={18} /> : <Copy size={18} />}
                 {copied ? 'Enlace copiado' : 'Copiar enlace'}
               </button>
+              {shareUrl && (
+                <div className="profile-qr-panel">
+                  <div className="profile-qr-copy">
+                    <span>QR para imprimir</span>
+                    <strong>¿Quieres saber algo más de mí?</strong>
+                    <p>Escanea y descubre mi perfil.</p>
+                  </div>
+                  <div className="profile-qr-preview" ref={profileQrRef}>
+                    <QRCodeSVG value={shareUrl} size={164} marginSize={2} />
+                  </div>
+                  <button
+                    className="secondary-action"
+                    type="button"
+                    onClick={downloadShareQr}
+                  >
+                    <Download size={18} />
+                    Descargar QR
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <div className="wallet-help">
@@ -2054,6 +2167,9 @@ function CreatorPage() {
                 )}
 
                 <QuestionText index={index} text={question.prompt} />
+                <p className="answer-updated-at">
+                  Última actualización: {formatUpdatedDate(question.updatedAt)}
+                </p>
 
                 {question.fields?.length ? (
                   <div className="structured-fields">
